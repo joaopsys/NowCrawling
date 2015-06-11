@@ -62,7 +62,7 @@ def getURLs(crawlurl, tags, regex2, types):
     elif (tags is not None):
         regex = FILE_REGEX.replace('tagholder', getTagsRe(tags)).replace('typeholder', getTypesRe(types))
     else:
-        regex = FILE_REGEX.replace('tagholder', regex2).replace('typeholder', getTypesRe(types))
+        regex = FILE_REGEX.replace('tagholder', regex2+'[^<> ]').replace('typeholder', getTypesRe(types))
 
     ##print(regex)
     p = re.compile(regex, re.IGNORECASE)
@@ -142,40 +142,47 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             minsize = tmp
 
     while True:
-        googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
-        print(len(googleurls))
-        ##print(googleurls)
-        for searchurl in googleurls:
-            downloadurls = getURLs(searchurl, tags, regex, extensions)
-            if len(downloadurls) < 1:
-                print('No results in '+searchurl)
-            else:
-                for file in downloadurls:
-                    if (maxfiles is not None and downloaded >= maxfiles):
-                        print(BColors.OKGREEN+'All files have been downloaded. Exiting...'+BColors.ENDC)
-                        exit()
-                    try:
-                        filename = file.split('/')[-1]
-                        meta = urllib.request.urlopen(file).info()
-                        filesize = meta.get_all("Content-Length")[0]
-                        if (limit is not None and (maxsize is not None and (int(filesize) > int(maxsize)) or (minsize is not None and (int(filesize) < int(minsize))))):
-                            print (BColors.WARNING+'Skipping file '+filename+' because size '+filesize+' is off limits.'+BColors.ENDC)
+        try:
+            googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
+            print(len(googleurls))
+            ##print(googleurls)
+            for searchurl in googleurls:
+                downloadurls = getURLs(searchurl, tags, regex, extensions)
+                if len(downloadurls) < 1:
+                    print('No results in '+searchurl)
+                else:
+                    for file in downloadurls:
+                        if (maxfiles is not None and downloaded >= maxfiles):
+                            print(BColors.OKGREEN+'All files have been downloaded. Exiting...'+BColors.ENDC)
+                            exit()
+                        try:
+                            filename = file.split('/')[-1]
+                            meta = urllib.request.urlopen(file).info()
+                            filesize = meta.get_all("Content-Length")[0]
+                            if (limit is not None and (maxsize is not None and (int(filesize) > int(maxsize)) or (minsize is not None and (int(filesize) < int(minsize))))):
+                                print (BColors.WARNING+'Skipping file '+filename+' because size '+filesize+' is off limits.'+BColors.ENDC)
+                                continue
+                            if ask:
+                                print (BColors.OKBLUE+'Download file '+filename+' of size '+filesize+' from '+file+'? [y/n]:'+BColors.ENDC)
+                                choice = input().lower()
+                                if choice not in YES:
+                                   continue
+                            print (BColors.OKGREEN+'Downloading file '+filename+' of size '+filesize+BColors.ENDC)
+                            urllib.request.urlretrieve(file, filename)
+                            downloaded += 1
+                        except KeyboardInterrupt:
+                            print(BColors.OKGREEN+'All files have been downloaded. Exiting...'+BColors.ENDC)
+                            exit()
+                        except:
+                            print(BColors.FAIL+'File '+file+ ' from '+searchurl+' not available'+BColors.ENDC)
                             continue
-                        if ask:
-                            print (BColors.OKBLUE+'Download file '+filename+' of size '+filesize+' from '+file+'? [y/n]:'+BColors.ENDC)
-                            choice = input().lower()
-                            if choice not in YES:
-                               continue
-                        print (BColors.OKGREEN+'Downloading file '+filename+' of size '+filesize+BColors.ENDC)
-                        urllib.request.urlretrieve(file, filename)
-                        downloaded += 1
-                    except:
-                        print(BColors.FAIL+'File '+file+ ' not available'+BColors.ENDC)
-                        continue
-        if len(googleurls) < GOOGLE_NUM_RESULTS:
-            break
-        else:
-            start+=len(googleurls)
+            if len(googleurls) < GOOGLE_NUM_RESULTS:
+                break
+            else:
+                start+=len(googleurls)
+        except KeyboardInterrupt:
+            print(BColors.OKGREEN+'All files have been downloaded. Exiting...'+BColors.ENDC)
+            exit()
 
 try:
     crawl(*parse_input())
