@@ -12,6 +12,7 @@ SMART_FILE_SEARCH = " intitle:index of "
 GOOGLE_NUM_RESULTS = 100
 FILE_REGEX = '(href=[^<> ]*tagholder\.(typeholder))|((ftp|http|https):\/\/[^<> ]*tagholder\.(typeholder))'
 YES = ['yes', 'y', 'ye', '']
+URL_TIMEOUT = 7
 
 class BColors:
     HEADER = '\033[95m'
@@ -52,7 +53,7 @@ def getURLs(crawlurl, tags, regex2, types):
 
     request = urllib.request.Request(url, None, headers)
     try:
-        response = urllib.request.urlopen(request)
+        response = urllib.request.urlopen(request,timeout=URL_TIMEOUT)
     except:
         return []
     data = str(response.read())
@@ -76,6 +77,7 @@ def getURLs(crawlurl, tags, regex2, types):
     return prettyurls
 
 def parse_input():
+    ##FIXME TODO MAKE -A DEFAULT
     parser = OptionParser()
     parser.add_option('-f', '--files', help='Crawl for files', action="store_true", dest="getfiles")
     parser.add_option('-c', '--content', help='Crawl for content (words, strings, pages, regexes)', action="store_false", dest="getfiles")
@@ -91,7 +93,7 @@ def parse_input():
     filenamegroup = OptionGroup(parser, "File Names Options", "You can only pick one."" If none are picked, EVERY file matching the specified extension will be downloaded")
     filenamegroup.add_option('-t', '--tags', help='A quoted list of words separated by spaces that must be present in the file name that you\'re crawling for', dest='tags', type='string')
     filenamegroup.add_option('-r', '--regex', help='Instead of tags you can just specify a regex for the file name you\'re looking for', dest='regex', type='string')
-
+    ##TODO FIXME -R STILL NEEDS TESTING!
     parser.add_option_group(filesgroup)
     parser.add_option_group(filenamegroup)
 
@@ -116,7 +118,7 @@ def parse_input():
         parser.error('You must specify keywords when crawling for files.')
     if (options.getfiles is True and (options.tags is not None and options.regex is not None)):
         parser.error('You can\'t pick both file name search options: -t or -r')
-    if (options.getfiles is True and ('-' not in options.limit)):
+    if (options.getfiles is True and options.limit is not None and '-' not in options.limit):
         parser.error('Limits must be separated by a hyphen.')
     ## FIXME FALTA TANTO CHECK AI JASUS, TIPO VER SE O GAJO NAO METE -A SEM METER -F ENTRE OUTROS AI JASUS
 
@@ -129,19 +131,18 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
         limit = limit.split('-')
         maxsize=limit[1]
         minsize=limit[0]
+        if (maxsize is ''):
+            maxsize = None
+        if (minsize is ''):
+            minsize = None
+        if (maxsize is not None and minsize is not None and int(maxsize) < int(minsize)):
+            print(BColors.FAIL+'You are dumb, but it\'s fine, I will swap limits'+BColors.ENDC)
+            tmp = maxsize
+            maxsize = minsize
+            minsize = tmp
 
-    if (maxsize is ''):
-        maxsize = None
-    if (minsize is ''):
-        minsize = None
-    if (maxsize is not None and minsize is not None and int(maxsize) < int(minsize)):
-        print(BColors.FAIL+'You are dumb, but it\'s fine, I will swap limits'+BColors.ENDC)
-        tmp = maxsize
-        maxsize = minsize
-        minsize = tmp
     while True:
-        ##googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
-        googleurls = ['http://localhost/']
+        googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
         print(len(googleurls))
         ##print(googleurls)
         for searchurl in googleurls:
@@ -168,9 +169,6 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
                         print (BColors.OKGREEN+'Downloading file '+filename+' of size '+filesize+BColors.ENDC)
                         urllib.request.urlretrieve(file, filename)
                         downloaded += 1
-                    except KeyboardInterrupt:
-                        print(BColors.OKGREEN+'All files have been downloaded. Exiting...'+BColors.ENDC)
-                        exit()
                     except:
                         print(BColors.FAIL+'File '+file+ ' not available'+BColors.ENDC)
                         continue
@@ -179,6 +177,9 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
         else:
             start+=len(googleurls)
 
-
-crawl(*parse_input())
+try:
+    crawl(*parse_input())
+except KeyboardInterrupt:
+    print(BColors.OKGREEN+'All files have been downloaded. Exiting...'+BColors.ENDC)
+    exit()
 
