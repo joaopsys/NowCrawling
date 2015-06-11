@@ -7,7 +7,10 @@ from optparse import OptionParser, OptionGroup
 import re
 
 GOOGLE_SEARCH_URL = "http://google.com/search?%s"
-GOOGLE_SEARCH_REGEX = 'href="\/url\?q=[^\/]*\/\/(?!webcache).*?&amp'
+GOOGLE_SEARCH_REGEX = 'a href="[^\/]*\/\/(?!webcache).*?"'
+GOOGLE_USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36'
+##    user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7'
+## GOOGLE_SEARCH_REGEX = 'href="\/url\?q=[^\/]*\/\/(?!webcache).*?&amp'
 SMART_FILE_SEARCH = " intitle:index of "
 GOOGLE_NUM_RESULTS = 100
 FILE_REGEX = '(href=[^<> ]*tagholder\.(typeholder))|((ftp|http|https):\/\/[^<> ]*tagholder\.(typeholder))'
@@ -27,15 +30,14 @@ class BColors:
 def crawlGoogle(numres, start, hint, smart):
     query = urllib.parse.urlencode({'num': numres, 'q': (hint+SMART_FILE_SEARCH if smart is True and SMART_FILE_SEARCH not in hint else hint), "start": start})
     url = GOOGLE_SEARCH_URL % query
-
-    user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7'
-    headers = {'User-Agent': user_agent, }
+    headers = {'User-Agent': GOOGLE_USER_AGENT, }
     request = urllib.request.Request(url, None, headers)
     response = urllib.request.urlopen(request)
     data = str(response.read())
     p = re.compile(GOOGLE_SEARCH_REGEX, re.IGNORECASE)
 
-    return list(set(x.replace('href="/url?q=', '').replace('HREF="/url?q=', '').replace('"', '').replace('&amp', '') for x in p.findall(data)))
+    ##return list(set(x.replace('href="/url?q=', '').replace('HREF="/url?q=', '').replace('"', '').replace('&amp', '') for x in p.findall(data)))
+    return list(set(x.replace('a href=', '').replace('a HREF=', '').replace('"', '').replace('A HREF=', '') for x in p.findall(data)))
 
 def getTagsRe(tags):
     tagslist = tags.split(" ")
@@ -48,15 +50,18 @@ def getTypesRe(types):
 
 def getURLs(crawlurl, tags, regex2, types):
     url = crawlurl
-    user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7'
-    headers = {'User-Agent': user_agent, }
+    headers = {'User-Agent': GOOGLE_USER_AGENT, }
 
     request = urllib.request.Request(url, None, headers)
     try:
         response = urllib.request.urlopen(request,timeout=URL_TIMEOUT)
+        data = str(response.read())
+    except KeyboardInterrupt:
+        print(BColors.FAIL+'Interrupted. Exiting...'+BColors.ENDC)
+        exit()
     except:
+        print(BColors.FAIL+'URL '+crawlurl+' not available'+BColors.ENDC)
         return []
-    data = str(response.read())
     if (tags is None and regex2 is None):
         regex = FILE_REGEX.replace('tagholder', '').replace('typeholder', getTypesRe(types))
     elif (tags is not None):
@@ -145,7 +150,6 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
         try:
             googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
             print(len(googleurls))
-            ##print(googleurls)
             for searchurl in googleurls:
                 downloadurls = getURLs(searchurl, tags, regex, extensions)
                 if len(downloadurls) < 1:
@@ -171,7 +175,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
                             urllib.request.urlretrieve(file, filename)
                             downloaded += 1
                         except KeyboardInterrupt:
-                            print(BColors.OKGREEN+'All files have been downloaded. Exiting...'+BColors.ENDC)
+                            print(BColors.FAIL+'Interrupted. Exiting...'+BColors.ENDC)
                             exit()
                         except:
                             print(BColors.FAIL+'File '+file+ ' from '+searchurl+' not available'+BColors.ENDC)
@@ -181,12 +185,12 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             else:
                 start+=len(googleurls)
         except KeyboardInterrupt:
-            print(BColors.OKGREEN+'All files have been downloaded. Exiting...'+BColors.ENDC)
+            print(BColors.FAIL+'Interrupted. Exiting...'+BColors.ENDC)
             exit()
 
 try:
     crawl(*parse_input())
 except KeyboardInterrupt:
-    print(BColors.OKGREEN+'All files have been downloaded. Exiting...'+BColors.ENDC)
+    print(BColors.OKGREEN+'Interrupted. Exiting...'+BColors.ENDC)
     exit()
 
