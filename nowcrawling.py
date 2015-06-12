@@ -152,6 +152,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             print(len(googleurls))
             for searchurl in googleurls:
                 downloadurls = getURLs(searchurl, tags, regex, extensions)
+                urllib.request.urlcleanup()
                 if len(downloadurls) < 1:
                     print('No results in '+searchurl)
                 else:
