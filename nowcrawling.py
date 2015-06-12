@@ -203,7 +203,7 @@ def parse_input():
     if not options.getfiles:
         parser.error('You must specify the crawler type: -f for files or -c for content')
     if options.getfiles and not options.keywords:
-        parser.error('You must specify keywords when crawling for files.')
+        parser.error('You must specify keywords (-k) when crawling for files.')
     if not options.getfiles and not options.keywords:
         parser.error('You must specify keywords when crawling for content.')
     if options.getfiles and options.tags and options.regex:
@@ -241,12 +241,15 @@ def sizeof_fmt(num, suffix='B'):
 def sizeToStr(filesize):
     return sizeof_fmt(filesize)
 
-def downloadFile(file, filename, fileSize):
+def downloadFile(file, filename, fileSize, verbose):
     def reporthook(blocknum, bs, size):
         update_progress(size/fileSize)
 
-    urllib.request.urlretrieve(file, filename, reporthook=reporthook)
-    print()
+    if verbose:
+        urllib.request.urlretrieve(file, filename, reporthook=reporthook)
+        print()
+    else:
+        urllib.request.urlretrieve(file, filename)
 
 # Download files from downloadurls, respecting conditions, updating file counts and printing info to user
 def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize,verbose):
@@ -275,12 +278,13 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
 
             # Get the file
             doVerbose(lambda: Logger().log('Downloading file {:s} of size {:s}'.format(filename, sizeToStr(filesize)),color='GREEN'), verbose)
-            downloadFile(file, filename, filesize)
+            downloadFile(file, filename, filesize, verbose)
             doVerbose(lambda: Logger().log('Done downloading file {:s}'.format(filename),color='GREEN'), verbose)
             downloaded += 1
         except KeyboardInterrupt:
-            # Stop this download, but continue
-            Logger().log('\nDownload of file {:s} interrupted. Continuing...'.format(file), True)
+            # Stop this download, but continue FIXME
+            #Logger().log('\nDownload of file {:s} interrupted. Continuing...'.format(file), True)
+            Logger().fatal_error('Interrupted. Exiting...')
         except:
             doVerbose(lambda: Logger().log('File ' + file + ' from ' + searchurl + ' not available', True, 'RED'),
                       verbose)
