@@ -271,6 +271,7 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
             doVerbose(lambda: Logger().log('All files have been downloaded. Exiting...', True, 'GREEN'), verbose)
             exit()
 
+        doVerbose(lambda: Logger().log(Logger().log('Checking '+file), verbose)
         filename = file.split('/')[-1]
         try:
             meta = urllib.request.urlopen(file).info()
