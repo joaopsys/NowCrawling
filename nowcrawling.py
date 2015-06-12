@@ -306,40 +306,42 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
     downloaded = 0
     start = 0
     minsize,maxsize = getMinMaxSizeFromLimit(limit)
+    try:
+        while True:
+            # Fetch results
+            doVerbose(lambda: Logger().log('Fetching {:d} results.'.format(GOOGLE_NUM_RESULTS)), verbose)
+            googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
+            doVerbose(lambda: Logger().log('Fetched {:d} results.'.format(len(googleurls))),verbose)
 
-    while True:
-        # Fetch results
-        doVerbose(lambda: Logger().log('Fetching {:d} results.'.format(GOOGLE_NUM_RESULTS)), verbose)
-        googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
-        doVerbose(lambda: Logger().log('Fetched {:d} results.'.format(len(googleurls))),verbose)
-
-        # Find matches in results. if getfiles, then these are urls
-        for searchurl in googleurls:
-            doVerbose(lambda: Logger().log('Crawling into '+searchurl+' ...'), verbose)
-            matches = crawlURLs(searchurl, tags, regex, extensions, getfiles, verbose)
-            urllib.request.urlcleanup()
-            doVerbose(lambda: Logger().log('Done crawling {:s}'.format(searchurl)), verbose)
-            if not matches:
-                doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
-            else:
-                # Got results
-                if getfiles:
-                    downloaded += downloadFiles(downloaded, matches, ask, searchurl, maxfiles, limit,minsize, maxsize, directory,verbose)
+            # Find matches in results. if getfiles, then these are urls
+            for searchurl in googleurls:
+                doVerbose(lambda: Logger().log('Crawling into '+searchurl+' ...'), verbose)
+                matches = crawlURLs(searchurl, tags, regex, extensions, getfiles, verbose)
+                urllib.request.urlcleanup()
+                doVerbose(lambda: Logger().log('Done crawling {:s}'.format(searchurl)), verbose)
+                if not matches:
+                    doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
                 else:
-                    for match in matches:
-                        Logger().log(match,color='GREEN')
-                        if contentFile:
-                            with open(contentFile, 'a') as f:
-                                f.write(match+"\n")
+                    # Got results
+                    if getfiles:
+                        downloaded += downloadFiles(downloaded, matches, ask, searchurl, maxfiles, limit,minsize, maxsize, directory,verbose)
+                    else:
+                        for match in matches:
+                            Logger().log(match,color='GREEN')
+                            if contentFile:
+                                with open(contentFile, 'a') as f:
+                                    f.write(match+"\n")
 
 
 
-        # If google gave us less results than we asked for, then we've reached the end
-        if len(googleurls) < GOOGLE_NUM_RESULTS:
-            Logger().log('No more results. Exiting.', True, 'GREEN')
-            break
-        else:
-            start+=len(googleurls)
+            # If google gave us less results than we asked for, then we've reached the end
+            if len(googleurls) < GOOGLE_NUM_RESULTS:
+                Logger().log('No more results. Exiting.', True, 'GREEN')
+                break
+            else:
+                start+=len(googleurls)
+    except KeyboardInterrupt:
+        Logger().fatal_error('Interrupted. Exiting...')
 
 def main():
     try:
