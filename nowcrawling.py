@@ -92,7 +92,8 @@ def getTagsRe(tags):
 def getTypesRe(types):
     return types.replace(' ', '|')
 
-def crawlURLs(crawlurl, tags, regex2, types, getfiles, verbose):
+# This is Jota's crazy magic trick
+def crawlURLs(crawlurl, tags, userRegex, types, getfiles, verbose):
     url = crawlurl
     headers = {'User-Agent': GOOGLE_USER_AGENT, }
 
@@ -107,21 +108,21 @@ def crawlURLs(crawlurl, tags, regex2, types, getfiles, verbose):
         doVerbose(lambda: Logger().log('URL '+crawlurl+' not available', True, 'RED'), verbose)
         return []
 
-    if (getfiles):
-        if not tags and not regex2:
+    if getfiles:
+        if not tags and not userRegex:
             regex = FILE_REGEX.replace('tagholder', '').replace('typeholder', getTypesRe(types))
         elif tags:
             regex = FILE_REGEX.replace('tagholder', getTagsRe(tags)).replace('typeholder', getTypesRe(types))
         else:
-            regex = FILE_REGEX.replace('tagholder', regex2).replace('typeholder', getTypesRe(types))
+            regex = FILE_REGEX.replace('tagholder', userRegex).replace('typeholder', getTypesRe(types))
     else:
-        regex = regex2
+        regex = userRegex
 
     p = re.compile(regex, re.IGNORECASE)
 
     tuples = p.findall(data)
 
-    if (len(tuples) < 1):
+    if not tuples:
         return []
 
     if getfiles:
@@ -130,7 +131,7 @@ def crawlURLs(crawlurl, tags, regex2, types, getfiles, verbose):
         prettyurls = list(crawlurl+x if "://" not in x else x for x in prettyurls)
     else:
         ## RETURN EVERYTHING IF TUPLES
-        if (isinstance(tuples[0],tuple)):
+        if isinstance(tuples[0],tuple):
             prettyurls = list(j[i] for j in tuples for i in range(len(j)))
         else:
             prettyurls = list(x for x in tuples)
@@ -207,9 +208,8 @@ def sizeof_fmt(num, suffix='B'):
 def sizeToStr(filesize):
     return sizeof_fmt(filesize)
 
-"""
-    Download files from downloadurls, respecting conditions, updating file counts and printing info to user
-"""
+
+# Download files from downloadurls, respecting conditions, updating file counts and printing info to user
 def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize,verbose):
     for file in downloadurls:
 
@@ -224,14 +224,12 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
             filesize = int(meta.get_all("Content-Length")[0])
             # Check filesize
             if limit and not (minsize <= filesize <= maxsize):
-                doVerbose(lambda: Logger().log(
-                    'Skipping file {:s} because {:s} is off limits.'.format(filename, sizeToStr(filesize)),color='YELLOW'), verbose)
+                doVerbose(lambda: Logger().log('Skipping file {:s} because {:s} is off limits.'.format(filename, sizeToStr(filesize)),color='YELLOW'), verbose)
                 continue
 
             # Check with user
             if ask:
-                Logger().log(
-                    'Download file {:s} of size {:s} from {:s}? [y/n]: '.format(filename, sizeToStr(filesize), file),color='DARKCYAN')
+                Logger().log('Download file {:s} of size {:s} from {:s}? [y/n]: '.format(filename, sizeToStr(filesize), file),color='DARKCYAN')
                 choice = input().lower()
                 if choice not in YES:
                     continue
@@ -256,23 +254,25 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
     minsize,maxsize = getMinMaxSizeFromLimit(limit)
 
     while True:
+        # Fetch results
         doVerbose(lambda: Logger().log('Fetching {:d} results.'.format(GOOGLE_NUM_RESULTS)), verbose)
         googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
         doVerbose(lambda: Logger().log('Fetched {:d} results.'.format(len(googleurls))),verbose)
 
+        # Find matches in results. if getfiles, then these are urls
         for searchurl in googleurls:
             doVerbose(lambda: Logger().log('Crawling into '+searchurl+' ...'), verbose)
 
-            downloadurls = crawlURLs(searchurl, tags, regex, extensions, getfiles, verbose)
+            matches = crawlURLs(searchurl, tags, regex, extensions, getfiles, verbose)
             urllib.request.urlcleanup()
-            if not downloadurls:
+            if not matches:
                 doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
             else:
                 # Got results
                 if getfiles:
-                    downloaded += downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize,verbose)
+                    downloaded += downloadFiles(downloaded, matches, ask, searchurl, maxfiles, limit,minsize, maxsize,verbose)
                 else:
-                    for match in downloadurls:
+                    for match in matches:
                         Logger().log(match,color='GREEN')
 
         # If google gave us less results than we asked for, then we've reached the end
@@ -282,9 +282,14 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
         else:
             start+=len(googleurls)
 
-try:
-    #crawl(True, "pink floyd", "mp3", True, None, None, False, None, None, True)
-    crawl(*parse_input())
-except KeyboardInterrupt:
-    Logger().fatal_error('Interrupted. Exiting...')
+
+def main():
+    try:
+        #crawl(True, "pink floyd", "mp3", True, None, None, False, None, None, True)
+        crawl(*parse_input())
+    except KeyboardInterrupt:
+        Logger().fatal_error('Interrupted. Exiting...')
+
+if __name__ == '__main__':
+    main()
 
