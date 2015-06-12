@@ -101,11 +101,10 @@ def crawlURLs(crawlurl, tags, regex2, types, getfiles, verbose):
         response = urllib.request.urlopen(request,timeout=URL_TIMEOUT)
         data = str(response.read())
     except KeyboardInterrupt:
-        Logger().log('Interrupted. Exiting...', True, 'RED')
-        exit()
+        Logger().fatal_error('Interrupted. Exiting...')
+        return []
     except:
         doVerbose(lambda: Logger().log('URL '+crawlurl+' not available', True, 'RED'), verbose)
-
         return []
 
     if (getfiles):
@@ -116,7 +115,6 @@ def crawlURLs(crawlurl, tags, regex2, types, getfiles, verbose):
         else:
             regex = FILE_REGEX.replace('tagholder', regex2).replace('typeholder', getTypesRe(types))
     else:
-        ##FIXME CONTENT BLA BLA BLA
         regex = regex2
 
     p = re.compile(regex, re.IGNORECASE)
@@ -131,7 +129,6 @@ def crawlURLs(crawlurl, tags, regex2, types, getfiles, verbose):
         prettyurls = list(x.replace('href=', '').replace('HREF=', '').replace('"', '').replace('\\', '') for x in tuples)
         prettyurls = list(crawlurl+x if "://" not in x else x for x in prettyurls)
     else:
-        ##FIXME CONTENT BLA BLA BLA
         ## RETURN EVERYTHING IF TUPLES
         if (isinstance(tuples[0],tuple)):
             prettyurls = list(j[i] for j in tuples for i in range(len(j)))
@@ -201,11 +198,11 @@ def getMinMaxSizeFromLimit(limit):
 
 #From http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
 def sizeof_fmt(num, suffix='B'):
-    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+    for unit in ['','K','M','G','T','P','E','Z']:
         if abs(num) < 1024.0:
             return "%3.1f%s%s" % (num, unit, suffix)
         num /= 1024.0
-    return "%.1f%s%s" % (num, 'Yi', suffix)
+    return "%.1f%s%s" % (num, 'Y', suffix)
 
 def sizeToStr(filesize):
     return sizeof_fmt(filesize)
@@ -281,7 +278,6 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
                         downloaded += downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize,verbose)
                     else:
                         for match in downloadurls:
-                            ##FIXME CONTENT BLA BLA
                             Logger().log(match,color='GREEN')
 
             # If google gave us less results than we asked for, then we've reached the end
@@ -294,8 +290,8 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             Logger().fatal_error('Interrupted. Exiting...')
 
 try:
-    crawl(True, "pink floyd", "mp3", True, None, None, False, None, None, True)
-    #crawl(*parse_input())
+    #crawl(True, "pink floyd", "mp3", True, None, None, False, None, None, True)
+    crawl(*parse_input())
 except KeyboardInterrupt:
     Logger().fatal_error('Interrupted. Exiting...')
 
