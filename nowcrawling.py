@@ -13,8 +13,8 @@ GOOGLE_USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, lik
 ## GOOGLE_SEARCH_REGEX = 'href="\/url\?q=[^\/]*\/\/(?!webcache).*?&amp'
 SMART_FILE_SEARCH = " intitle:index of "
 GOOGLE_NUM_RESULTS = 100
-FILE_REGEX = '(href=[^<> ]*tagholder\.(typeholder))|((ftp|http|https):\/\/[^<> ]*tagholder\.(typeholder))'
-YES = ['yes', 'y', 'ye', '']
+FILE_REGEX = '(href=[^<>]*tagholder[^<>]*\.(?:typeholder))|((?:ftp|http|https):\/\/[^<>]*tagholder[^<>]*\.(?:typeholder))'
+YES = ['yes', 'y', 'ye']
 URL_TIMEOUT = 7
 
 class BColors:
@@ -28,7 +28,7 @@ class BColors:
     UNDERLINE = '\033[4m'
 
 def crawlGoogle(numres, start, hint, smart):
-    query = urllib.parse.urlencode({'num': numres, 'q': (hint+SMART_FILE_SEARCH if smart is True and SMART_FILE_SEARCH not in hint else hint), "start": start})
+    query = urllib.parse.urlencode({'num': numres, 'q': (hint+SMART_FILE_SEARCH if smart and SMART_FILE_SEARCH not in hint else hint), "start": start})
     url = GOOGLE_SEARCH_URL % query
     headers = {'User-Agent': GOOGLE_USER_AGENT, }
     request = urllib.request.Request(url, None, headers)
@@ -40,8 +40,8 @@ def crawlGoogle(numres, start, hint, smart):
     return list(set(x.replace('a href=', '').replace('a HREF=', '').replace('"', '').replace('A HREF=', '') for x in p.findall(data)))
 
 def getTagsRe(tags):
-    tagslist = tags.split(" ")
-    tagsre = ''.join(i + "[^<> ]*" for i in tagslist)
+    tagslist = tags.split()
+    tagsre = "[^<>]*".join(tagslist)
     ##print(tagsre)
     return tagsre
 
@@ -65,12 +65,12 @@ def crawlURLs(crawlurl, tags, regex2, types, getfiles, verbose):
         return []
 
     if (getfiles):
-        if (tags is None and regex2 is None):
+        if not tags and not regex2:
             regex = FILE_REGEX.replace('tagholder', '').replace('typeholder', getTypesRe(types))
         elif (tags is not None):
             regex = FILE_REGEX.replace('tagholder', getTagsRe(tags)).replace('typeholder', getTypesRe(types))
         else:
-            regex = FILE_REGEX.replace('tagholder', regex2+'[^<> ]').replace('typeholder', getTypesRe(types))
+            regex = FILE_REGEX.replace('tagholder', regex2).replace('typeholder', getTypesRe(types))
     else:
         ##FIXME CONTENT BLA BLA BLA
         regex = regex2
@@ -97,7 +97,6 @@ def crawlURLs(crawlurl, tags, regex2, types, getfiles, verbose):
     return prettyurls
 
 def parse_input():
-    ##FIXME TODO MAKE -A DEFAULT
     parser = OptionParser()
     parser.add_option('-f', '--files', help='Crawl for files', action="store_true", dest="getfiles")
     parser.add_option('-c', '--content', help='Crawl for content (words, strings, pages, regexes)', action="store_false", dest="getfiles")
@@ -108,13 +107,14 @@ def parse_input():
     filesgroup.add_option('-a', '--ask', help='Ask before downloading', action="store_true", dest="ask", default=False)
     filesgroup.add_option('-l', '--limit', help='File size limit in bytes separated by a hyphen (example: 500-1200 for files between 500 and 1200 bytes, -500 for files smaller than 500 bytes, 500- for files larger than 500 bytes) (Default: None)', dest="limit", type='string', default=None)
     filesgroup.add_option('-n', '--number', help='Number of files to download until crawler stops (Default: Max)', dest="maxfiles", type='int', default=None)
-    filesgroup.add_option('-e', '--extensions', help='A quoted list of file extensions separated by spaces. Default: all', dest='extensions', type='string', default='[a-zA-Z0-9][a-zA-Z0-9][a-zA-Z0-9][a-zA-Z0-9]?')
+    filesgroup.add_option('-e', '--extensions', help='A quoted list of file extensions separated by spaces. Default: all', dest='extensions', type='string', default='[a-zA-Z0-9]+')
     filesgroup.add_option('-s', '--smart', help='Smart file search, will highly reduce the crawling time but might not crawl all the results. Basically the same as appending \'intitle: index of\' to your keywords.', action="store_true", dest="smart", default=False)
 
     filenamegroup = OptionGroup(parser, "File Names Options", "You can only pick one."" If none are picked, EVERY file matching the specified extension will be downloaded")
     filenamegroup.add_option('-t', '--tags', help='A quoted list of words separated by spaces that must be present in the file name that you\'re crawling for', dest='tags', type='string')
     filenamegroup.add_option('-r', '--regex', help='Instead of tags you can just specify a regex for the file name you\'re looking for', dest='regex', type='string')
     ##TODO FIXME -R STILL NEEDS TESTING!
+    ##TODO FIXME MAIS UM ARGUMENTO COM UM SITE ESPECIFICO PARA NAO TER DE IR AO GOOGLE
     parser.add_option_group(filesgroup)
     parser.add_option_group(filenamegroup)
 
@@ -144,10 +144,8 @@ def parse_input():
 def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, verbose):
     downloaded = 0
     start = 0
-    if (limit is not None):
-        limit = limit.split('-')
-        maxsize=limit[1]
-        minsize=limit[0]
+    if (limit):
+        minsize,maxsize = limit.split('-')
         if (maxsize is ''):
             maxsize = None
         if (minsize is ''):
