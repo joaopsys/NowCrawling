@@ -141,6 +141,8 @@ def crawlURLs(crawlurl, tags, userRegex, types, getfiles, verbose):
         doVerbose(lambda: Logger().log('URL '+crawlurl+' not available', True, 'RED'), verbose)
         return []
 
+    doVerbose(lambda: Logger().log('Page downloaded. Checking...'), verbose)
+
     if getfiles:
         if not tags and not userRegex:
             regex = FILE_REGEX.replace('tagholder', '').replace('typeholder', getTypesRe(types))
@@ -314,9 +316,9 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
         # Find matches in results. if getfiles, then these are urls
         for searchurl in googleurls:
             doVerbose(lambda: Logger().log('Crawling into '+searchurl+' ...'), verbose)
-
             matches = crawlURLs(searchurl, tags, regex, extensions, getfiles, verbose)
             urllib.request.urlcleanup()
+            doVerbose(lambda: Logger().log('Done crawling {:s}'.format(searchurl)), verbose)
             if not matches:
                 doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
             else:
