@@ -48,7 +48,7 @@ def getTagsRe(tags):
 def getTypesRe(types):
     return types.replace(' ', '|')
 
-def crawlURLs(crawlurl, tags, regex2, types, getfiles):
+def crawlURLs(crawlurl, tags, regex2, types, getfiles, verbose):
     url = crawlurl
     headers = {'User-Agent': GOOGLE_USER_AGENT, }
 
@@ -60,7 +60,8 @@ def crawlURLs(crawlurl, tags, regex2, types, getfiles):
         print(BColors.FAIL+'Interrupted. Exiting...'+BColors.ENDC)
         exit()
     except:
-        print(BColors.FAIL+'URL '+crawlurl+' not available'+BColors.ENDC)
+        if (verbose):
+            print(BColors.FAIL+'URL '+crawlurl+' not available'+BColors.ENDC)
         return []
 
     if (getfiles):
@@ -101,6 +102,7 @@ def parse_input():
     parser.add_option('-f', '--files', help='Crawl for files', action="store_true", dest="getfiles")
     parser.add_option('-c', '--content', help='Crawl for content (words, strings, pages, regexes)', action="store_false", dest="getfiles")
     parser.add_option('-k', '--keywords', help='(Required) A quoted list of words separated by spaces which will be the search terms of the crawler', dest='keywords', type='string')
+    parser.add_option('-v', '--verbose', help='Display all error/warning/info messages', action="store_true", dest="verbose",default=False)
 
     filesgroup = OptionGroup(parser, "Files (-f) Crawler Arguments")
     filesgroup.add_option('-a', '--ask', help='Ask before downloading', action="store_true", dest="ask", default=False)
@@ -137,9 +139,9 @@ def parse_input():
         parser.error('You must specify a matching regex (-m) when crawling for content.')
     ## FIXME FALTA TANTO CHECK AI JASUS, TIPO VER SE O GAJO NAO METE -A SEM METER -F ENTRE OUTROS AI JASUS
 
-    return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles
+    return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.verbose
 
-def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles):
+def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, verbose):
     downloaded = 0
     start = 0
     if (limit is not None):
@@ -159,38 +161,46 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
     while True:
         try:
             googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
-            print(len(googleurls))
+            if (verbose):
+                print('Fetched '+str(len(googleurls))+' results.')
             for searchurl in googleurls:
-                downloadurls = crawlURLs(searchurl, tags, regex, extensions, getfiles)
+                if (verbose):
+                    print('Crawling into '+searchurl+' ...')
+                downloadurls = crawlURLs(searchurl, tags, regex, extensions, getfiles, verbose)
                 urllib.request.urlcleanup()
                 if len(downloadurls) < 1:
-                    print('No results in '+searchurl)
+                    if (verbose):
+                        print('No results in '+searchurl)
                 else:
                     if (getfiles):
                         for file in downloadurls:
                             if (maxfiles is not None and downloaded >= maxfiles):
-                                print(BColors.OKGREEN+'All files have been downloaded. Exiting...'+BColors.ENDC)
+                                if (verbose):
+                                    print(BColors.OKGREEN+'All files have been downloaded. Exiting...'+BColors.ENDC)
                                 exit()
                             try:
                                 filename = file.split('/')[-1]
                                 meta = urllib.request.urlopen(file).info()
                                 filesize = meta.get_all("Content-Length")[0]
                                 if (limit is not None and (maxsize is not None and (int(filesize) > int(maxsize)) or (minsize is not None and (int(filesize) < int(minsize))))):
-                                    print (BColors.WARNING+'Skipping file '+filename+' because size '+filesize+' is off limits.'+BColors.ENDC)
+                                    if (verbose):
+                                        print (BColors.WARNING+'Skipping file '+filename+' because size '+filesize+' is off limits.'+BColors.ENDC)
                                     continue
                                 if ask:
                                     print (BColors.OKBLUE+'Download file '+filename+' of size '+filesize+' from '+file+'? [y/n]:'+BColors.ENDC)
                                     choice = input().lower()
                                     if choice not in YES:
                                        continue
-                                print (BColors.OKGREEN+'Downloading file '+filename+' of size '+filesize+BColors.ENDC)
+                                if (verbose):
+                                    print (BColors.OKGREEN+'Downloading file '+filename+' of size '+filesize+BColors.ENDC)
                                 urllib.request.urlretrieve(file, filename)
                                 downloaded += 1
                             except KeyboardInterrupt:
                                 print(BColors.FAIL+'Interrupted. Exiting...'+BColors.ENDC)
                                 exit()
                             except:
-                                print(BColors.FAIL+'File '+file+ ' from '+searchurl+' not available'+BColors.ENDC)
+                                if (verbose):
+                                    print(BColors.FAIL+'File '+file+ ' from '+searchurl+' not available'+BColors.ENDC)
                                 continue
                     else:
                         for match in downloadurls:
