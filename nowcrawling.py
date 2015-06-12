@@ -110,7 +110,7 @@ def crawlURLs(crawlurl, tags, regex2, types, getfiles, verbose):
     if (getfiles):
         if not tags and not regex2:
             regex = FILE_REGEX.replace('tagholder', '').replace('typeholder', getTypesRe(types))
-        elif (tags is not None):
+        elif tags:
             regex = FILE_REGEX.replace('tagholder', getTagsRe(tags)).replace('typeholder', getTypesRe(types))
         else:
             regex = FILE_REGEX.replace('tagholder', regex2).replace('typeholder', getTypesRe(types))
@@ -124,7 +124,7 @@ def crawlURLs(crawlurl, tags, regex2, types, getfiles, verbose):
     if (len(tuples) < 1):
         return []
 
-    if (getfiles):
+    if getfiles:
         tuples = [j[i] for j in tuples for i in range(len(j)) if '.' in j[i]]
         prettyurls = list(x.replace('href=', '').replace('HREF=', '').replace('"', '').replace('\\', '') for x in tuples)
         prettyurls = list(crawlurl+x if "://" not in x else x for x in prettyurls)
@@ -225,32 +225,28 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
             # Check filesize
             if limit and not (minsize <= filesize <= maxsize):
                 doVerbose(lambda: Logger().log(
-                    'Skipping file {:s} because {:s} is off limits.'.format(filename, sizeToStr(filesize)),
-                    color='YELLOW'), verbose)
+                    'Skipping file {:s} because {:s} is off limits.'.format(filename, sizeToStr(filesize)),color='YELLOW'), verbose)
                 continue
 
             # Check with user
             if ask:
                 Logger().log(
-                    'Download file {:s} of size {:s} from {:s}? [y/n]: '.format(filename, sizeToStr(filesize), file),
-                    color='DARKCYAN')
+                    'Download file {:s} of size {:s} from {:s}? [y/n]: '.format(filename, sizeToStr(filesize), file),color='DARKCYAN')
                 choice = input().lower()
                 if choice not in YES:
                     continue
-            doVerbose(lambda: Logger().log('Downloading file {:s} of size {:s}'.format(filename, sizeToStr(filesize)),
-                                           color='GREEN'), verbose)
 
             # Get the file
+            doVerbose(lambda: Logger().log('Downloading file {:s} of size {:s}'.format(filename, sizeToStr(filesize)),color='GREEN'), verbose)
             urllib.request.urlretrieve(file, filename)
-
             doVerbose(lambda: Logger().log('Done downloading file {:s}'.format(filename),color='GREEN'), verbose)
             downloaded += 1
         except KeyboardInterrupt:
-            Logger().fatal_error('Interrupted. Exiting...')
+            # Stop this download, but continue
+            Logger().log('Download of file {:s} interrupted. Continuing...', True)
         except:
             doVerbose(lambda: Logger().log('File ' + file + ' from ' + searchurl + ' not available', True, 'RED'),
                       verbose)
-            continue
 
     return downloaded
 
@@ -260,34 +256,31 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
     minsize,maxsize = getMinMaxSizeFromLimit(limit)
 
     while True:
-        try:
-            doVerbose(lambda: Logger().log('Fetching {:d} results.'.format(GOOGLE_NUM_RESULTS)), verbose)
-            googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
-            doVerbose(lambda: Logger().log('Fetched {:d} results.'.format(len(googleurls))),verbose)
+        doVerbose(lambda: Logger().log('Fetching {:d} results.'.format(GOOGLE_NUM_RESULTS)), verbose)
+        googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
+        doVerbose(lambda: Logger().log('Fetched {:d} results.'.format(len(googleurls))),verbose)
 
-            for searchurl in googleurls:
-                doVerbose(lambda: Logger().log('Crawling into '+searchurl+' ...'), verbose)
+        for searchurl in googleurls:
+            doVerbose(lambda: Logger().log('Crawling into '+searchurl+' ...'), verbose)
 
-                downloadurls = crawlURLs(searchurl, tags, regex, extensions, getfiles, verbose)
-                urllib.request.urlcleanup()
-                if not downloadurls:
-                    doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
-                else:
-                    # Got results
-                    if getfiles:
-                        downloaded += downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize,verbose)
-                    else:
-                        for match in downloadurls:
-                            Logger().log(match,color='GREEN')
-
-            # If google gave us less results than we asked for, then we've reached the end
-            if len(googleurls) < GOOGLE_NUM_RESULTS:
-                Logger().log('No more results. Exiting.', True, 'GREEN')
-                break
+            downloadurls = crawlURLs(searchurl, tags, regex, extensions, getfiles, verbose)
+            urllib.request.urlcleanup()
+            if not downloadurls:
+                doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
             else:
-                start+=len(googleurls)
-        except KeyboardInterrupt:
-            Logger().fatal_error('Interrupted. Exiting...')
+                # Got results
+                if getfiles:
+                    downloaded += downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize,verbose)
+                else:
+                    for match in downloadurls:
+                        Logger().log(match,color='GREEN')
+
+        # If google gave us less results than we asked for, then we've reached the end
+        if len(googleurls) < GOOGLE_NUM_RESULTS:
+            Logger().log('No more results. Exiting.', True, 'GREEN')
+            break
+        else:
+            start+=len(googleurls)
 
 try:
     #crawl(True, "pink floyd", "mp3", True, None, None, False, None, None, True)
