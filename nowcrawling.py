@@ -184,6 +184,9 @@ def parse_input():
     filesgroup.add_option('-n', '--number', help='Number of files to download until crawler stops (Default: Max)', dest="maxfiles", type='int', default=None)
     filesgroup.add_option('-e', '--extensions', help='A quoted list of file extensions separated by spaces. Default: all', dest='extensions', type='string', default='[a-zA-Z0-9]+')
     filesgroup.add_option('-s', '--smart', help='Smart file search, will highly reduce the crawling time but might not crawl all the results. Basically the same as appending \'intitle: index of\' to your keywords.', action="store_true", dest="smart", default=False)
+    filesgroup.add_option('-d', '--directory', help='Directory to download files to. Will be created if it does not exist. Default is current directory', type="string", dest="directory", default='.')
+
+
 
     filenamegroup = OptionGroup(parser, "File Names Options", "You can only pick one."" If none are picked, EVERY file matching the specified extension will be downloaded")
     filenamegroup.add_option('-t', '--tags', help='A quoted list of words separated by spaces that must be present in the file name that you\'re crawling for', dest='tags', type='string')
@@ -195,12 +198,13 @@ def parse_input():
 
     contentgroup = OptionGroup(parser, "Content (-c) Crawler Arguments")
     contentgroup.add_option('-m', '--match', help='(Required) A regex that will match the content you are crawling for', dest='regex', type='string')
+    contentgroup.add_option('-o', '--output-file', help='Output file to store content matches', dest='contentFile', type='string')
 
     parser.add_option_group(contentgroup)
 
     (options, args) = parser.parse_args()
 
-    if not options.getfiles:
+    if options.getfiles == None:
         parser.error('You must specify the crawler type: -f for files or -c for content')
     if options.getfiles and not options.keywords:
         parser.error('You must specify keywords (-k) when crawling for files.')
@@ -214,7 +218,7 @@ def parse_input():
         parser.error('You must specify a matching regex (-m) when crawling for content.')
     ## FIXME FALTA TANTO CHECK AI JASUS, TIPO VER SE O GAJO NAO METE -A SEM METER -F ENTRE OUTROS AI JASUS
 
-    return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.verbose
+    return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.directory, options.contentFile, options.verbose
 
 def getMinMaxSizeFromLimit(limit):
     if limit:
@@ -241,18 +245,23 @@ def sizeof_fmt(num, suffix='B'):
 def sizeToStr(filesize):
     return sizeof_fmt(filesize)
 
-def downloadFile(file, filename, fileSize, verbose):
+def downloadFile(file, directory, filename, fileSize, verbose):
     def reporthook(blocknum, bs, size):
         update_progress(size/fileSize)
 
+    try:
+        os.mkdir(directory)
+    except:
+        pass
+
     if verbose:
-        urllib.request.urlretrieve(file, filename, reporthook=reporthook)
+        urllib.request.urlretrieve(file, os.path.join(directory,filename), reporthook=reporthook)
         print()
     else:
-        urllib.request.urlretrieve(file, filename)
+        urllib.request.urlretrieve(file, os.path.join(directory,filename))
 
 # Download files from downloadurls, respecting conditions, updating file counts and printing info to user
-def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize,verbose):
+def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize, directory, verbose):
     for file in downloadurls:
 
         # Check if we've reached the maximum number of files
@@ -278,7 +287,7 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
 
             # Get the file
             doVerbose(lambda: Logger().log('Downloading file {:s} of size {:s}'.format(filename, sizeToStr(filesize)),color='GREEN'), verbose)
-            downloadFile(file, filename, filesize, verbose)
+            downloadFile(file, directory, filename, filesize, verbose)
             doVerbose(lambda: Logger().log('Done downloading file {:s}'.format(filename),color='GREEN'), verbose)
             downloaded += 1
         except KeyboardInterrupt:
@@ -291,7 +300,7 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
 
     return downloaded
 
-def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, verbose):
+def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, directory, contentFile, verbose):
     downloaded = 0
     start = 0
     minsize,maxsize = getMinMaxSizeFromLimit(limit)
@@ -313,10 +322,15 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             else:
                 # Got results
                 if getfiles:
-                    downloaded += downloadFiles(downloaded, matches, ask, searchurl, maxfiles, limit,minsize, maxsize,verbose)
+                    downloaded += downloadFiles(downloaded, matches, ask, searchurl, maxfiles, limit,minsize, maxsize, directory,verbose)
                 else:
                     for match in matches:
                         Logger().log(match,color='GREEN')
+                        if contentFile:
+                            with open(contentFile, 'a') as f:
+                                f.write(match+"\n")
+
+
 
         # If google gave us less results than we asked for, then we've reached the end
         if len(googleurls) < GOOGLE_NUM_RESULTS:
@@ -327,7 +341,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
 
 def main():
     try:
-        #crawl(True, "pink floyd", "mp3", True, None, None, False, None, None, True)
+        #crawl(True, "pink floyd", "mp3", True, None, None, False, None, None, '.', None, True)
         crawl(*parse_input())
     except KeyboardInterrupt:
         Logger().fatal_error('Interrupted. Exiting...')
