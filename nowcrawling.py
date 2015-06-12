@@ -166,17 +166,17 @@ def parse_input():
 
     (options, args) = parser.parse_args()
 
-    if (options.getfiles is None):
+    if not options.getfiles:
         parser.error('You must specify the crawler type: -f for files or -c for content')
-    if (options.getfiles is True and options.keywords is None):
+    if options.getfiles and not options.keywords:
         parser.error('You must specify keywords when crawling for files.')
-    if (options.getfiles is False and options.keywords is None):
+    if not options.getfiles and not options.keywords:
         parser.error('You must specify keywords when crawling for content.')
-    if (options.getfiles is True and (options.tags is not None and options.regex is not None)):
-        parser.error('You can\'t pick both file name search options: -t or -r')
-    if (options.getfiles is True and options.limit is not None and '-' not in options.limit):
+    if options.getfiles and options.tags and options.regex:
+        parser.error("You can't pick both file name search options: -t or -r")
+    if options.getfiles and options.limit and '-' not in options.limit:
         parser.error('Limits must be separated by a hyphen.')
-    if (options.getfiles is False and options.regex is None):
+    if not options.getfiles and not options.regex:
         parser.error('You must specify a matching regex (-m) when crawling for content.')
     ## FIXME FALTA TANTO CHECK AI JASUS, TIPO VER SE O GAJO NAO METE -A SEM METER -F ENTRE OUTROS AI JASUS
 
