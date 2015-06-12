@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+import os
+import time
+import sys
+
 __author__ = 'jota'
 
 import urllib.request
@@ -17,15 +21,53 @@ FILE_REGEX = '(href=[^<>]*tagholder[^<>]*\.(?:typeholder))|((?:ftp|http|https):\
 YES = ['yes', 'y', 'ye']
 URL_TIMEOUT = 7
 
-class BColors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[36m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
+def get_timestamp():
+    return time.strftime('%Y/%m/%d %H:%M:%S')
+class Logger:
+
+    shell_mod = {
+        '':'',
+       'PURPLE' : '\033[95m',
+       'CYAN' : '\033[96m',
+       'DARKCYAN' : '\033[36m',
+       'BLUE' : '\033[94m',
+       'GREEN' : '\033[92m',
+       'YELLOW' : '\033[93m',
+       'RED' : '\033[91m',
+       'BOLD' : '\033[1m',
+       'UNDERLINE' : '\033[4m',
+       'RESET' : '\033[0m'
+    }
+
+    def log ( self, message, is_bold=False, color='', log_time=True):
+        prefix = ''
+        suffix = ''
+
+        if log_time:
+            prefix += '[{:s}] '.format(get_timestamp())
+
+        if os.name == 'posix':
+            if is_bold:
+                prefix += self.shell_mod['BOLD']
+            prefix += self.shell_mod[color.upper()]
+
+            suffix = self.shell_mod['RESET']
+
+        message = prefix + message + suffix
+        print ( message )
+        sys.stdout.flush()
+
+
+    def error(self, err):
+        self.log(err, True, 'RED')
+
+    def fatal_error(self, err):
+        self.error(err)
+        exit()
+
+def doVerbose(f, verbose=False):
+    if verbose:
+        f()
 
 def crawlGoogle(numres, start, hint, smart):
     query = urllib.parse.urlencode({'num': numres, 'q': (hint+SMART_FILE_SEARCH if smart and SMART_FILE_SEARCH not in hint else hint), "start": start})
@@ -57,11 +99,11 @@ def crawlURLs(crawlurl, tags, regex2, types, getfiles, verbose):
         response = urllib.request.urlopen(request,timeout=URL_TIMEOUT)
         data = str(response.read())
     except KeyboardInterrupt:
-        print(BColors.FAIL+'Interrupted. Exiting...'+BColors.ENDC)
+        Logger().log('Interrupted. Exiting...', True, 'RED')
         exit()
     except:
-        if (verbose):
-            print(BColors.FAIL+'URL '+crawlurl+' not available'+BColors.ENDC)
+        doVerbose(lambda: Logger().log('URL '+crawlurl+' not available', True, 'RED'), verbose)
+
         return []
 
     if (getfiles):
@@ -151,70 +193,63 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
         if (minsize is ''):
             minsize = None
         if (maxsize is not None and minsize is not None and int(maxsize) < int(minsize)):
-            print(BColors.FAIL+'You are dumb, but it\'s fine, I will swap limits'+BColors.ENDC)
+            Logger().log("You are dumb, but it's fine, I will swap limits", color='RED')
             tmp = maxsize
             maxsize = minsize
             minsize = tmp
 
     while True:
         try:
+            doVerbose(lambda: Logger().log('Fetching {:d} results.'.format(GOOGLE_NUM_RESULTS)), verbose)
             googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
-            if (verbose):
-                print('Fetched '+str(len(googleurls))+' results.')
+            doVerbose(lambda: Logger().log('Fetched {:d} results.'.format(len(googleurls))),verbose)
             for searchurl in googleurls:
-                if (verbose):
-                    print('Crawling into '+searchurl+' ...')
+                doVerbose(lambda: Logger().log('Crawling into '+searchurl+' ...'), verbose)
                 downloadurls = crawlURLs(searchurl, tags, regex, extensions, getfiles, verbose)
                 urllib.request.urlcleanup()
                 if len(downloadurls) < 1:
-                    if (verbose):
-                        print('No results in '+searchurl)
+                    doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
                 else:
                     if (getfiles):
                         for file in downloadurls:
                             if (maxfiles is not None and downloaded >= maxfiles):
-                                if (verbose):
-                                    print(BColors.OKGREEN+'All files have been downloaded. Exiting...'+BColors.ENDC)
+                                doVerbose(lambda: Logger().log('All files have been downloaded. Exiting...', True, 'GREEN'), verbose)
                                 exit()
                             try:
                                 filename = file.split('/')[-1]
                                 meta = urllib.request.urlopen(file).info()
                                 filesize = meta.get_all("Content-Length")[0]
                                 if (limit is not None and (maxsize is not None and (int(filesize) > int(maxsize)) or (minsize is not None and (int(filesize) < int(minsize))))):
-                                    if (verbose):
-                                        print (BColors.WARNING+'Skipping file '+filename+' because size '+filesize+' is off limits.'+BColors.ENDC)
+                                    doVerbose(lambda: Logger().log('Skipping file '+filename+' because size '+filesize+' is off limits.', color='YELLOW'), verbose)
                                     continue
                                 if ask:
-                                    print (BColors.OKBLUE+'Download file '+filename+' of size '+filesize+' from '+file+'? [y/n]:'+BColors.ENDC)
+                                    Logger().log ('Download file '+filename+' of size '+filesize+' from '+file+'? [y/n]:', color='DARKCYAN')
                                     choice = input().lower()
                                     if choice not in YES:
                                        continue
-                                if (verbose):
-                                    print (BColors.OKGREEN+'Downloading file '+filename+' of size '+filesize+BColors.ENDC)
+                                doVerbose(lambda: Logger().log('Downloading file '+filename+' of size '+filesize, color='GREEN'), verbose)
+
                                 urllib.request.urlretrieve(file, filename)
                                 downloaded += 1
                             except KeyboardInterrupt:
-                                print(BColors.FAIL+'Interrupted. Exiting...'+BColors.ENDC)
-                                exit()
+                                Logger().fatal_error('Interrupted. Exiting...')
                             except:
-                                if (verbose):
-                                    print(BColors.FAIL+'File '+file+ ' from '+searchurl+' not available'+BColors.ENDC)
+                                doVerbose(lambda: Logger().log('File '+file+ ' from '+searchurl+' not available', True, 'RED'), verbose)
                                 continue
                     else:
                         for match in downloadurls:
                             ##FIXME CONTENT BLA BLA
-                            print(BColors.OKGREEN+match+BColors.ENDC)
+                            Logger().log(match,color='GREEN')
             if len(googleurls) < GOOGLE_NUM_RESULTS:
                 break
             else:
                 start+=len(googleurls)
         except KeyboardInterrupt:
-            print(BColors.FAIL+'Interrupted. Exiting...'+BColors.ENDC)
-            exit()
+            Logger().fatal_error('Interrupted. Exiting...')
 
 try:
-    crawl(*parse_input())
+    crawl(True, "pink floyd", "mp3", True, None, None, False, None, None, True)
+    #crawl(*parse_input())
 except KeyboardInterrupt:
-    print(BColors.OKGREEN+'Interrupted. Exiting...'+BColors.ENDC)
-    exit()
+    Logger().fatal_error('Interrupted. Exiting...')
 
