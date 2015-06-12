@@ -135,7 +135,7 @@ def crawlURLs(crawlurl, tags, userRegex, types, getfiles, verbose):
         response = urllib.request.urlopen(request,timeout=URL_TIMEOUT)
         data = str(response.read())
     except KeyboardInterrupt:
-        Logger().fatal_error('\nInterrupted. Exiting...')
+        Logger().fatal_error('Interrupted. Exiting...')
         return []
     except:
         doVerbose(lambda: Logger().log('URL '+crawlurl+' not available', True, 'RED'), verbose)
@@ -280,7 +280,7 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
             downloaded += 1
         except KeyboardInterrupt:
             # Stop this download, but continue
-            Logger().log('Download of file {:s} interrupted. Continuing...'.format(file), True)
+            Logger().log('\nDownload of file {:s} interrupted. Continuing...'.format(file), True)
         except:
             doVerbose(lambda: Logger().log('File ' + file + ' from ' + searchurl + ' not available', True, 'RED'),
                       verbose)
