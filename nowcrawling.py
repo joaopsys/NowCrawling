@@ -21,6 +21,8 @@ FILE_REGEX = '(href=[^<>]*tagholder[^<>]*\.(?:typeholder))|((?:ftp|http|https):\
 YES = ['yes', 'y', 'ye']
 URL_TIMEOUT = 7
 
+MAX_FILE_SIZE = 2**50
+
 def get_timestamp():
     return time.strftime('%Y/%m/%d %H:%M:%S')
 class Logger:
@@ -183,64 +185,108 @@ def parse_input():
 
     return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.verbose
 
+def getMinMaxSizeFromLimit(limit):
+    if limit:
+        minsize, maxsize = limit.split('-')
+        if not minsize:
+            minsize = '0'
+        if not maxsize:
+            maxsize = str(MAX_FILE_SIZE)
+
+        if maxsize and minsize and int(maxsize) < int(minsize):
+            Logger().log("You are dumb, but it's fine, I will swap limits", color='RED')
+            return int(maxsize),int(minsize)
+    else:
+        return 0,MAX_FILE_SIZE
+
+#From http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
+def sizeof_fmt(num, suffix='B'):
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Yi', suffix)
+
+def sizeToStr(filesize):
+    return sizeof_fmt(filesize)
+
+"""
+    Download files from downloadurls, respecting conditions, updating file counts and printing info to user
+"""
+def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize,verbose):
+    for file in downloadurls:
+
+        # Check if we've reached the maximum number of files
+        if maxfiles and downloaded >= maxfiles:
+            doVerbose(lambda: Logger().log('All files have been downloaded. Exiting...', True, 'GREEN'), verbose)
+            exit()
+
+        filename = file.split('/')[-1]
+        try:
+            meta = urllib.request.urlopen(file).info()
+            filesize = int(meta.get_all("Content-Length")[0])
+            # Check filesize
+            if limit and not (minsize <= filesize <= maxsize):
+                doVerbose(lambda: Logger().log(
+                    'Skipping file {:s} because {:s} is off limits.'.format(filename, sizeToStr(filesize)),
+                    color='YELLOW'), verbose)
+                continue
+
+            # Check with user
+            if ask:
+                Logger().log(
+                    'Download file {:s} of size {:s} from {:s}? [y/n]: '.format(filename, sizeToStr(filesize), file),
+                    color='DARKCYAN')
+                choice = input().lower()
+                if choice not in YES:
+                    continue
+            doVerbose(lambda: Logger().log('Downloading file {:s} of size {:s}'.format(filename, sizeToStr(filesize)),
+                                           color='GREEN'), verbose)
+
+            # Get the file
+            urllib.request.urlretrieve(file, filename)
+
+            doVerbose(lambda: Logger().log('Done downloading file {:s}'.format(filename),color='GREEN'), verbose)
+            downloaded += 1
+        except KeyboardInterrupt:
+            Logger().fatal_error('Interrupted. Exiting...')
+        except:
+            doVerbose(lambda: Logger().log('File ' + file + ' from ' + searchurl + ' not available', True, 'RED'),
+                      verbose)
+            continue
+
+    return downloaded
+
 def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, verbose):
     downloaded = 0
     start = 0
-    if (limit):
-        minsize,maxsize = limit.split('-')
-        if (maxsize is ''):
-            maxsize = None
-        if (minsize is ''):
-            minsize = None
-        if (maxsize is not None and minsize is not None and int(maxsize) < int(minsize)):
-            Logger().log("You are dumb, but it's fine, I will swap limits", color='RED')
-            tmp = maxsize
-            maxsize = minsize
-            minsize = tmp
+    minsize,maxsize = getMinMaxSizeFromLimit(limit)
 
     while True:
         try:
             doVerbose(lambda: Logger().log('Fetching {:d} results.'.format(GOOGLE_NUM_RESULTS)), verbose)
             googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
             doVerbose(lambda: Logger().log('Fetched {:d} results.'.format(len(googleurls))),verbose)
+
             for searchurl in googleurls:
                 doVerbose(lambda: Logger().log('Crawling into '+searchurl+' ...'), verbose)
+
                 downloadurls = crawlURLs(searchurl, tags, regex, extensions, getfiles, verbose)
                 urllib.request.urlcleanup()
-                if len(downloadurls) < 1:
+                if not downloadurls:
                     doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
                 else:
-                    if (getfiles):
-                        for file in downloadurls:
-                            if (maxfiles is not None and downloaded >= maxfiles):
-                                doVerbose(lambda: Logger().log('All files have been downloaded. Exiting...', True, 'GREEN'), verbose)
-                                exit()
-                            try:
-                                filename = file.split('/')[-1]
-                                meta = urllib.request.urlopen(file).info()
-                                filesize = meta.get_all("Content-Length")[0]
-                                if (limit is not None and (maxsize is not None and (int(filesize) > int(maxsize)) or (minsize is not None and (int(filesize) < int(minsize))))):
-                                    doVerbose(lambda: Logger().log('Skipping file '+filename+' because size '+filesize+' is off limits.', color='YELLOW'), verbose)
-                                    continue
-                                if ask:
-                                    Logger().log ('Download file '+filename+' of size '+filesize+' from '+file+'? [y/n]:', color='DARKCYAN')
-                                    choice = input().lower()
-                                    if choice not in YES:
-                                       continue
-                                doVerbose(lambda: Logger().log('Downloading file '+filename+' of size '+filesize, color='GREEN'), verbose)
-
-                                urllib.request.urlretrieve(file, filename)
-                                downloaded += 1
-                            except KeyboardInterrupt:
-                                Logger().fatal_error('Interrupted. Exiting...')
-                            except:
-                                doVerbose(lambda: Logger().log('File '+file+ ' from '+searchurl+' not available', True, 'RED'), verbose)
-                                continue
+                    # Got results
+                    if getfiles:
+                        downloaded += downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize,verbose)
                     else:
                         for match in downloadurls:
                             ##FIXME CONTENT BLA BLA
                             Logger().log(match,color='GREEN')
+
+            # If google gave us less results than we asked for, then we've reached the end
             if len(googleurls) < GOOGLE_NUM_RESULTS:
+                Logger().log('No more results. Exiting.', True, 'GREEN')
                 break
             else:
                 start+=len(googleurls)
