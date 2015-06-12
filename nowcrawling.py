@@ -71,6 +71,39 @@ def doVerbose(f, verbose=False):
     if verbose:
         f()
 
+# Adapted from the console package
+def getTerminalWidth():
+    import os
+    if 'windows' in os.name.lower():
+        return 80
+    env = os.environ
+    def ioctl_GWINSZ(fd):
+        try:
+            import fcntl, termios, struct, os
+            cr = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,
+        '1234'))
+        except:
+            return
+        return cr
+    cr = ioctl_GWINSZ(0) or ioctl_GWINSZ(1) or ioctl_GWINSZ(2)
+    if not cr:
+        try:
+            fd = os.open(os.ctermid(), os.O_RDONLY)
+            cr = ioctl_GWINSZ(fd)
+            os.close(fd)
+        except:
+            pass
+    if not cr:
+        cr = (env.get('LINES', 25), env.get('COLUMNS', 80))
+    return int(cr[1])
+
+def update_progress(progress, prefix='Progress'):
+    MAX_CARDINALS = getTerminalWidth()-len('{:s}: [] 100%'.format(prefix))
+    num_cardinals = round(progress*MAX_CARDINALS)
+    num_whites = MAX_CARDINALS - num_cardinals
+    sys.stdout.write('\r{0}: [{1}{2}] {3}%'.format(prefix, '#'*num_cardinals,' '*num_whites, round(progress*100)))
+    sys.stdout.flush()
+
 def crawlGoogle(numres, start, hint, smart):
     query = urllib.parse.urlencode({'num': numres, 'q': (hint+SMART_FILE_SEARCH if smart and SMART_FILE_SEARCH not in hint else hint), "start": start})
     url = GOOGLE_SEARCH_URL % query
@@ -102,7 +135,7 @@ def crawlURLs(crawlurl, tags, userRegex, types, getfiles, verbose):
         response = urllib.request.urlopen(request,timeout=URL_TIMEOUT)
         data = str(response.read())
     except KeyboardInterrupt:
-        Logger().fatal_error('Interrupted. Exiting...')
+        Logger().fatal_error('\nInterrupted. Exiting...')
         return []
     except:
         doVerbose(lambda: Logger().log('URL '+crawlurl+' not available', True, 'RED'), verbose)
@@ -208,6 +241,12 @@ def sizeof_fmt(num, suffix='B'):
 def sizeToStr(filesize):
     return sizeof_fmt(filesize)
 
+def downloadFile(file, filename, fileSize):
+    def reporthook(blocknum, bs, size):
+        update_progress(size/fileSize)
+
+    urllib.request.urlretrieve(file, filename, reporthook=reporthook)
+    print()
 
 # Download files from downloadurls, respecting conditions, updating file counts and printing info to user
 def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize,verbose):
@@ -236,12 +275,12 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
 
             # Get the file
             doVerbose(lambda: Logger().log('Downloading file {:s} of size {:s}'.format(filename, sizeToStr(filesize)),color='GREEN'), verbose)
-            urllib.request.urlretrieve(file, filename)
+            downloadFile(file, filename, filesize)
             doVerbose(lambda: Logger().log('Done downloading file {:s}'.format(filename),color='GREEN'), verbose)
             downloaded += 1
         except KeyboardInterrupt:
             # Stop this download, but continue
-            Logger().log('Download of file {:s} interrupted. Continuing...', True)
+            Logger().log('Download of file {:s} interrupted. Continuing...'.format(file), True)
         except:
             doVerbose(lambda: Logger().log('File ' + file + ' from ' + searchurl + ' not available', True, 'RED'),
                       verbose)
@@ -281,7 +320,6 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             break
         else:
             start+=len(googleurls)
-
 
 def main():
     try:
