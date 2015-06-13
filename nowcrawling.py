@@ -185,7 +185,7 @@ def parse_input():
     filesgroup.add_option('-l', '--limit', help='File size limit in bytes separated by a hyphen (example: 500-1200 for files between 500 and 1200 bytes, -500 for files smaller than 500 bytes, 500- for files larger than 500 bytes) (Default: None)', dest="limit", type='string', default=None)
     filesgroup.add_option('-n', '--number', help='Number of files to download until crawler stops (Default: Max)', dest="maxfiles", type='int', default=None)
     filesgroup.add_option('-e', '--extensions', help='A quoted list of file extensions separated by spaces. Default: all', dest='extensions', type='string', default='[a-zA-Z0-9]+')
-    filesgroup.add_option('-s', '--smart', help='Smart file search, will highly reduce the crawling time but might not crawl all the results. Basically the same as appending \'intitle: index of\' to your keywords.', action="store_true", dest="smart", default=False)
+    filesgroup.add_option('-s', '--smart', help='Smart file search, will highly reduce the crawling time but might not crawl all the results. Basically the same as appending \'intitle:index of\' to your keywords.', action="store_true", dest="smart", default=False)
     filesgroup.add_option('-d', '--directory', help='Directory to download files to. Will be created if it does not exist. Default is current directory', type="string", dest="directory", default='.')
 
 
@@ -206,19 +206,22 @@ def parse_input():
 
     (options, args) = parser.parse_args()
 
-    if options.getfiles == None:
+    if options.getfiles is None:
         parser.error('You must specify the crawler type: -f for files or -c for content')
     if options.getfiles and not options.keywords:
         parser.error('You must specify keywords (-k) when crawling for files.')
     if not options.getfiles and not options.keywords:
         parser.error('You must specify keywords when crawling for content.')
     if options.getfiles and options.tags and options.regex:
-        parser.error("You can't pick both file name search options: -t or -r")
+        parser.error("You can't pick both file name search options: -t or -r/-m")
     if options.getfiles and options.limit and '-' not in options.limit:
         parser.error('Limits must be separated by a hyphen.')
     if not options.getfiles and not options.regex:
-        parser.error('You must specify a matching regex (-m) when crawling for content.')
-    ## FIXME FALTA TANTO CHECK AI JASUS, TIPO VER SE O GAJO NAO METE -A SEM METER -F ENTRE OUTROS AI JASUS
+        parser.error('You must specify a matching regex (-m/-r) when crawling for content.')
+    if not options.getfiles and (options.ask or options.limit or options.maxfiles or options.smart):
+        parser.error('Options -a, -l, -n, -s and -t can only be used when crawling for files.')
+    if options.getfiles and options.contentFile:
+        parser.error('Options -o can only be used when crawling for content.')
 
     return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.directory, options.contentFile, options.verbose
 
@@ -232,9 +235,10 @@ def getMinMaxSizeFromLimit(limit):
 
         if maxsize and minsize and int(maxsize) < int(minsize):
             Logger().log("You are dumb, but it's fine, I will swap limits", color='RED')
-            return int(maxsize),int(minsize)
+            return int(maxsize), int(minsize)
+        return int(minsize), int(maxsize)
     else:
-        return 0,MAX_FILE_SIZE
+        return 0, MAX_FILE_SIZE
 
 #From http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
 def sizeof_fmt(num, suffix='B'):
@@ -247,9 +251,9 @@ def sizeof_fmt(num, suffix='B'):
 def sizeToStr(filesize):
     return sizeof_fmt(filesize)
 
-def downloadFile(file, directory, filename, fileSize, verbose):
+def downloadFile(file, directory, filename, verbose):
     def reporthook(blocknum, bs, size):
-        update_progress(size/fileSize)
+        update_progress(blocknum*bs/size)
 
     try:
         os.mkdir(directory)
@@ -257,10 +261,10 @@ def downloadFile(file, directory, filename, fileSize, verbose):
         pass
 
     if verbose:
-        urllib.request.urlretrieve(file, os.path.join(directory,filename), reporthook=reporthook)
+        urllib.request.urlretrieve(file, os.path.join(directory, filename), reporthook=reporthook)
         print()
     else:
-        urllib.request.urlretrieve(file, os.path.join(directory,filename))
+        urllib.request.urlretrieve(file, os.path.join(directory, filename))
 
 # Download files from downloadurls, respecting conditions, updating file counts and printing info to user
 def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize, directory, verbose):
@@ -290,7 +294,7 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
 
             # Get the file
             doVerbose(lambda: Logger().log('Downloading file {:s} of size {:s}'.format(filename, sizeToStr(filesize)),color='GREEN'), verbose)
-            downloadFile(file, directory, filename, filesize, verbose)
+            downloadFile(file, directory, filename, verbose)
             doVerbose(lambda: Logger().log('Done downloading file {:s}'.format(filename),color='GREEN'), verbose)
             downloaded += 1
         except KeyboardInterrupt:
@@ -300,13 +304,14 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
         except:
             doVerbose(lambda: Logger().log('File ' + file + ' from ' + searchurl + ' not available', True, 'RED'),
                       verbose)
+            raise
 
     return downloaded
 
 def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, directory, contentFile, verbose):
     downloaded = 0
     start = 0
-    minsize,maxsize = getMinMaxSizeFromLimit(limit)
+    minsize, maxsize = getMinMaxSizeFromLimit(limit)
     try:
         while True:
             # Fetch results
