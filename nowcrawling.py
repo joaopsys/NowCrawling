@@ -126,19 +126,19 @@ def getTypesRe(types):
     return types.replace(' ', '|')
 
 # This is Jota's crazy magic trick
-def crawlURLs(crawlurl, tags, userRegex, types, getfiles, verbose):
+def crawlURLs(crawlurl, tags, userRegex, types, getfiles, verbose, timeout):
     url = crawlurl
     headers = {'User-Agent': GOOGLE_USER_AGENT, }
 
     request = urllib.request.Request(url, None, headers)
     try:
-        response = urllib.request.urlopen(request,timeout=URL_TIMEOUT)
+        response = urllib.request.urlopen(request,timeout=timeout)
         data = str(response.read())
     except KeyboardInterrupt:
         Logger().fatal_error('Interrupted. Exiting...')
         return []
     except:
-        doVerbose(lambda: Logger().log('URL '+crawlurl+' not available', True, 'RED'), verbose)
+        doVerbose(lambda: Logger().log('URL '+crawlurl+' not available or timed out', True, 'RED'), verbose)
         return []
 
     doVerbose(lambda: Logger().log('Page downloaded. Checking...'), verbose)
@@ -178,6 +178,7 @@ def parse_input():
     parser.add_option('-f', '--files', help='Crawl for files', action="store_true", dest="getfiles")
     parser.add_option('-c', '--content', help='Crawl for content (words, strings, pages, regexes)', action="store_false", dest="getfiles")
     parser.add_option('-k', '--keywords', help='(Required) A quoted list of words separated by spaces which will be the search terms of the crawler', dest='keywords', type='string')
+    parser.add_option('-i', '--ignore-after', help='Time (in seconds) for an URL to be considered down (Default: 7)', dest='timeout', type='int', default=URL_TIMEOUT)
     parser.add_option('-v', '--verbose', help='Display all error/warning/info messages', action="store_true", dest="verbose",default=False)
 
     filesgroup = OptionGroup(parser, "Files (-f) Crawler Arguments")
@@ -223,7 +224,7 @@ def parse_input():
     if options.getfiles and options.contentFile:
         parser.error('Options -o can only be used when crawling for content.')
 
-    return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.directory, options.contentFile, options.verbose
+    return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.directory, options.contentFile, options.verbose, options.timeout
 
 def getMinMaxSizeFromLimit(limit):
     if limit:
@@ -253,7 +254,10 @@ def sizeToStr(filesize):
 
 def downloadFile(file, directory, filename, verbose):
     def reporthook(blocknum, bs, size):
-        update_progress(blocknum*bs/size)
+        if (size < 0):
+            update_progress(1)
+        else:
+            update_progress(blocknum*bs/size)
 
     try:
         os.mkdir(directory)
@@ -278,8 +282,15 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
         doVerbose(lambda: Logger().log(Logger().log('Checking '+file), verbose))
         filename = file.split('/')[-1]
         try:
-            meta = urllib.request.urlopen(file).info()
-            filesize = int(meta.get_all("Content-Length")[0])
+            try:
+                meta = urllib.request.urlopen(file).info()
+                filesize = int(meta.get_all("Content-Length")[0])
+            except TypeError:
+                # No content-length. Weird but possible
+                filesize = -1
+                ##FIXME PENSAR NESTES CASOS QUANDO NAO HOUVER CONTENT LENGTH
+                doVerbose(lambda: Logger().log('Skipping file {:s} because file size cannot be determined.'.format(filename),color='YELLOW'), verbose)
+                continue
             # Check filesize
             if limit and not (minsize <= filesize <= maxsize):
                 doVerbose(lambda: Logger().log('Skipping file {:s} because {:s} is off limits.'.format(filename, sizeToStr(filesize)),color='YELLOW'), verbose)
@@ -304,11 +315,10 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
         except:
             doVerbose(lambda: Logger().log('File ' + file + ' from ' + searchurl + ' not available', True, 'RED'),
                       verbose)
-            raise
 
     return downloaded
 
-def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, directory, contentFile, verbose):
+def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, directory, contentFile, verbose, timeout):
     downloaded = 0
     start = 0
     minsize, maxsize = getMinMaxSizeFromLimit(limit)
@@ -317,12 +327,14 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             # Fetch results
             doVerbose(lambda: Logger().log('Fetching {:d} results.'.format(GOOGLE_NUM_RESULTS)), verbose)
             googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
+            ##fixme a good test for content length
+            #googleurls=['http://www.vulture.com/2015/06/game-of-thrones-adaptation-debate.html']
             doVerbose(lambda: Logger().log('Fetched {:d} results.'.format(len(googleurls))),verbose)
 
             # Find matches in results. if getfiles, then these are urls
             for searchurl in googleurls:
                 doVerbose(lambda: Logger().log('Crawling into '+searchurl+' ...'), verbose)
-                matches = crawlURLs(searchurl, tags, regex, extensions, getfiles, verbose)
+                matches = crawlURLs(searchurl, tags, regex, extensions, getfiles, verbose, timeout)
                 urllib.request.urlcleanup()
                 doVerbose(lambda: Logger().log('Done crawling {:s}'.format(searchurl)), verbose)
                 if not matches:
