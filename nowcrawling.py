@@ -281,7 +281,7 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
             exit()
 
         doVerbose(lambda: Logger().log(Logger().log('Checking '+file), verbose))
-        filename = file.split('/')[-1]
+        filename = urllib.parse.unquote(file.split('/')[-1])
         try:
             try:
                 meta = urllib.request.urlopen(file).info()
@@ -337,10 +337,11 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
                 doVerbose(lambda: Logger().log('Crawling into '+searchurl+' ...'), verbose)
                 matches = crawlURLs(searchurl, tags, regex, extensions, getfiles, verbose, timeout)
                 urllib.request.urlcleanup()
-                doVerbose(lambda: Logger().log('Done crawling {:s}'.format(searchurl)), verbose)
+                doVerbose(lambda: Logger().log('Done crawling {:s}.'.format(searchurl)), verbose)
                 if not matches:
                     doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
                 else:
+                    doVerbose(lambda: Logger().log('Files: \t' + '\n\t'.join(matches)), verbose)
                     # Got results
                     if getfiles:
                         downloaded += downloadFiles(downloaded, matches, ask, searchurl, maxfiles, limit,minsize, maxsize, directory,verbose)
