@@ -166,7 +166,7 @@ def crawlURLs(crawlurl, tags, userRegex, types, getfiles, verbose, timeout):
 
     if getfiles:
         tuples = [j[i] for j in tuples for i in range(len(j)) if '.' in j[i]]
-        prettyurls = list(x.replace('href=', '').replace('HREF=', '').replace('"', '').replace('\\', '') for x in tuples)
+        prettyurls = list(x.replace('href=', '').replace('HREF=', '').replace('"', '').replace('\'', '').replace('\\', '') for x in tuples)
         prettyurls = list(crawlurl+x if "://" not in x else x for x in prettyurls)
     else:
         ## RETURN EVERYTHING IF TUPLES
@@ -279,7 +279,7 @@ def downloadFile(file, directory, filename, verbose):
         return
 
 # Download files from downloadurls, respecting conditions, updating file counts and printing info to user
-def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize, directory, verbose):
+def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize, directory, verbose, timeout):
     for file in downloadurls:
 
         # Check if we've reached the maximum number of files
@@ -290,7 +290,7 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
         doVerbose(lambda: Logger().log(Logger().log('Checking '+file), verbose))
         filename = urllib.parse.unquote(file.split('/')[-1])
         try:
-            meta = urllib.request.urlopen(file).info()
+            meta = urllib.request.urlopen(file, timeout=timeout).info()
             try:
                 filesize = int(meta.get_all("Content-Length")[0])
             except TypeError:
@@ -354,7 +354,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
                     doVerbose(lambda: Logger().log('Files: \t' + '\n\t'.join(matches)), verbose)
                     # Got results
                     if getfiles:
-                        downloaded += downloadFiles(downloaded, matches, ask, searchurl, maxfiles, limit,minsize, maxsize, directory,verbose)
+                        downloaded += downloadFiles(downloaded, matches, ask, searchurl, maxfiles, limit,minsize, maxsize, directory,verbose,timeout)
                     else:
                         for match in matches:
                             Logger().log(match,color='GREEN')
