@@ -256,7 +256,7 @@ def sizeof_fmt(num, suffix='B'):
 def sizeToStr(filesize):
     return sizeof_fmt(filesize)
 
-def downloadFile(file, directory, filename, verbose):
+def downloadFile(file, directory, filename):
     def reporthook(blocknum, bs, size):
         if (size < 0):
             update_progress(1)
@@ -268,14 +268,10 @@ def downloadFile(file, directory, filename, verbose):
     except:
         pass
     try:
-        if verbose:
-            urllib.request.urlretrieve(file, os.path.join(directory, filename), reporthook=reporthook)
-            print()
-        else:
-            urllib.request.urlretrieve(file, os.path.join(directory, filename))
+        urllib.request.urlretrieve(file, os.path.join(directory, filename), reporthook=reporthook)
     except KeyboardInterrupt:
-        ## FIXME Leave the hal-file there? For now let's not be intrusive
-        doVerbose(lambda: Logger().log('\nDownload of file {:s} interrupted. Continuing...'.format(file),color='YELLOW'), verbose)
+        ## FIXME Leave the half-file there? For now let's not be intrusive
+        Logger().log('\nDownload of file {:s} interrupted. Continuing...'.format(file),color='YELLOW')
         return
 
 # Download files from downloadurls, respecting conditions, updating file counts and printing info to user
@@ -314,7 +310,7 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
 
             # Get the file
             doVerbose(lambda: Logger().log('Downloading file {:s} of size {:s}'.format(filename, sizeToStr(filesize) if filesize>=0 else 'Unknown'),color='GREEN'), verbose)
-            downloadFile(file, directory, filename, verbose)
+            downloadFile(file, directory, filename)
             doVerbose(lambda: Logger().log('Done downloading file {:s}'.format(filename),color='GREEN'), verbose)
             downloaded += 1
         except KeyboardInterrupt:
