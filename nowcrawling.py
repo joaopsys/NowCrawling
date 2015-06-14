@@ -98,6 +98,7 @@ def getTerminalWidth():
     return int(cr[1])
 
 def update_progress(progress, prefix='Progress'):
+    progress = max(min(progress, 1), 0)
     MAX_CARDINALS = getTerminalWidth()-len('{:s}: [] 100%'.format(prefix))
     num_cardinals = round(progress*MAX_CARDINALS)
     num_whites = MAX_CARDINALS - num_cardinals
@@ -257,7 +258,7 @@ def downloadFile(file, directory, filename, verbose):
         if (size < 0):
             update_progress(1)
         else:
-            update_progress(blocknum*bs/size)
+            update_progress(min(size,blocknum*bs/size))
 
     try:
         os.mkdir(directory)
