@@ -17,7 +17,7 @@ GOOGLE_USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, lik
 ## GOOGLE_SEARCH_REGEX = 'href="\/url\?q=[^\/]*\/\/(?!webcache).*?&amp'
 SMART_FILE_SEARCH = " intitle:index of "
 GOOGLE_NUM_RESULTS = 100
-FILE_REGEX = '(href=[^<>]*tagholder[^<>]*\.(?:typeholder))|((?:ftp|http|https):\/\/[^<>]*tagholder[^<>]*\.(?:typeholder))'
+FILE_REGEX = '(href=[^<>]*tagholder[^<>]*\.(?:typeholder))|((?:ftp|http|https):\/\/[^<>\n\t ]*holdertag[^<>\n\t ]*\.(?:typeholder))'
 YES = ['yes', 'y', 'ye']
 URL_TIMEOUT = 7
 
@@ -117,9 +117,12 @@ def crawlGoogle(numres, start, hint, smart):
     ##return list(set(x.replace('href="/url?q=', '').replace('HREF="/url?q=', '').replace('"', '').replace('&amp', '') for x in p.findall(data)))
     return list(set(x.replace('a href=', '').replace('a HREF=', '').replace('"', '').replace('A HREF=', '') for x in p.findall(data)))
 
-def getTagsRe(tags):
+def getTagsRe(tags, flag):
     tagslist = tags.split()
-    tagsre = "[^<>]*".join(tagslist)
+    if flag == 1:
+        tagsre = "[^<>]*".join(tagslist)
+    else:
+        tagsre = "[^<>\n\t ]*".join(tagslist)
     ##print(tagsre)
     return tagsre
 
@@ -146,11 +149,11 @@ def crawlURLs(crawlurl, tags, userRegex, types, getfiles, verbose, timeout):
 
     if getfiles:
         if not tags and not userRegex:
-            regex = FILE_REGEX.replace('tagholder', '').replace('typeholder', getTypesRe(types))
+            regex = FILE_REGEX.replace('tagholder', '').replace('typeholder', getTypesRe(types)).replace('holdertag', '')
         elif tags:
-            regex = FILE_REGEX.replace('tagholder', getTagsRe(tags)).replace('typeholder', getTypesRe(types))
+            regex = FILE_REGEX.replace('tagholder', getTagsRe(tags, 1)).replace('typeholder', getTypesRe(types)).replace('holdertag', getTagsRe(tags, 2))
         else:
-            regex = FILE_REGEX.replace('tagholder', userRegex).replace('typeholder', getTypesRe(types))
+            regex = FILE_REGEX.replace('tagholder', userRegex).replace('typeholder', getTypesRe(types)).replace('holdertag', userRegex)
     else:
         regex = userRegex
 
@@ -172,7 +175,7 @@ def crawlURLs(crawlurl, tags, userRegex, types, getfiles, verbose, timeout):
         else:
             prettyurls = list(x for x in tuples)
 
-    return prettyurls
+    return list(set(prettyurls))
 
 def parse_input():
     parser = OptionParser()
@@ -264,12 +267,16 @@ def downloadFile(file, directory, filename, verbose):
         os.mkdir(directory)
     except:
         pass
-
-    if verbose:
-        urllib.request.urlretrieve(file, os.path.join(directory, filename), reporthook=reporthook)
-        print()
-    else:
-        urllib.request.urlretrieve(file, os.path.join(directory, filename))
+    try:
+        if verbose:
+            urllib.request.urlretrieve(file, os.path.join(directory, filename), reporthook=reporthook)
+            print()
+        else:
+            urllib.request.urlretrieve(file, os.path.join(directory, filename))
+    except KeyboardInterrupt:
+        ## FIXME Leave the hal-file there? For now let's not be intrusive
+        doVerbose(lambda: Logger().log('\nDownload of file {:s} interrupted. Continuing...'.format(file),color='YELLOW'), verbose)
+        return
 
 # Download files from downloadurls, respecting conditions, updating file counts and printing info to user
 def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize, directory, verbose):
@@ -283,15 +290,16 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
         doVerbose(lambda: Logger().log(Logger().log('Checking '+file), verbose))
         filename = urllib.parse.unquote(file.split('/')[-1])
         try:
+            meta = urllib.request.urlopen(file).info()
             try:
-                meta = urllib.request.urlopen(file).info()
                 filesize = int(meta.get_all("Content-Length")[0])
             except TypeError:
                 # No content-length. Weird but possible
                 filesize = -1
-                ##FIXME PENSAR NESTES CASOS QUANDO NAO HOUVER CONTENT LENGTH
-                doVerbose(lambda: Logger().log('Skipping file {:s} because file size cannot be determined.'.format(filename),color='YELLOW'), verbose)
-                continue
+                if (limit):
+                    doVerbose(lambda: Logger().log('Skipping file {:s} because file size cannot be determined.'.format(filename),color='YELLOW'), verbose)
+                    continue
+
             # Check filesize
             if limit and not (minsize <= filesize <= maxsize):
                 doVerbose(lambda: Logger().log('Skipping file {:s} because {:s} is off limits.'.format(filename, sizeToStr(filesize)),color='YELLOW'), verbose)
@@ -299,19 +307,17 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
 
             # Check with user
             if ask:
-                Logger().log('Download file {:s} of size {:s} from {:s}? [y/n]: '.format(filename, sizeToStr(filesize), file),color='DARKCYAN')
+                Logger().log('Download file {:s} of size {:s} from {:s}? [y/n]: '.format(filename, sizeToStr(filesize) if filesize>=0 else 'Unknown', file),color='DARKCYAN')
                 choice = input().lower()
                 if choice not in YES:
                     continue
 
             # Get the file
-            doVerbose(lambda: Logger().log('Downloading file {:s} of size {:s}'.format(filename, sizeToStr(filesize)),color='GREEN'), verbose)
+            doVerbose(lambda: Logger().log('Downloading file {:s} of size {:s}'.format(filename, sizeToStr(filesize) if filesize>=0 else 'Unknown'),color='GREEN'), verbose)
             downloadFile(file, directory, filename, verbose)
             doVerbose(lambda: Logger().log('Done downloading file {:s}'.format(filename),color='GREEN'), verbose)
             downloaded += 1
         except KeyboardInterrupt:
-            # Stop this download, but continue FIXME
-            #Logger().log('\nDownload of file {:s} interrupted. Continuing...'.format(file), True)
             Logger().fatal_error('Interrupted. Exiting...')
         except:
             doVerbose(lambda: Logger().log('File ' + file + ' from ' + searchurl + ' not available', True, 'RED'),
@@ -330,6 +336,10 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
             ##fixme a good test for content length
             #googleurls=['http://www.vulture.com/2015/06/game-of-thrones-adaptation-debate.html']
+            ##fixme a good test for urls regex
+            #googleurls=['http://www.amazon.com/Tchaikovsky-Music-Index-Gerald-Abraham/dp/0781296269']
+            ##fixme a good test for forbidden
+            #googleurls=['http://0audio.com/downloads/Game%20of%20Thrones%20S01%20Ep%2001-10/']
             doVerbose(lambda: Logger().log('Fetched {:d} results.'.format(len(googleurls))),verbose)
 
             # Find matches in results. if getfiles, then these are urls
