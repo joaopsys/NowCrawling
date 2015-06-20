@@ -3,7 +3,7 @@ import contextlib
 import os
 import time
 import sys
-from urllib.error import ContentTooShortError
+from urllib.error import ContentTooShortError, HTTPError, URLError
 import urllib.request
 import urllib.parse
 from optparse import OptionParser, OptionGroup
@@ -231,9 +231,12 @@ def read_data_from_url(url, timeout, headers, verbose):
     except KeyboardInterrupt:
         Logger().fatal_error('Interrupted. Exiting...')
         return None
-    except:
-        doVerbose(lambda: Logger().log('URL '+url+' not available or timed out', True, 'RED'), verbose)
-        return None
+    except HTTPError as e:
+        doVerbose(lambda: Logger().log('URL {:s} not available or timed out ({:d})'.format(url, e.code), True, 'RED'),verbose)
+    except URLError as e:
+        doVerbose(lambda: Logger().log('URL {:s} not available or timed out (URL Error: {:s})'.format(url, str(e.reason)),True, 'RED'), verbose)
+    except Exception as e:
+        doVerbose(lambda: Logger().log('URL {:s} not available or timed out ({:s})'.format(url, str(e)),True, 'RED'), verbose)
 
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
@@ -397,10 +400,12 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
                 downloaded += 1
         except KeyboardInterrupt:
             Logger().fatal_error('Interrupted. Exiting...')
-        except:
-            doVerbose(lambda: Logger().log('File ' + file + ' from ' + searchurl + ' not available', True, 'RED'),
-                      verbose)
-            #raise
+        except HTTPError as e:
+            doVerbose(lambda: Logger().log('File {:s} from {:s} not available ({:d})'.format(file, searchurl, e.code), True, 'RED'),verbose)
+        except URLError as e:
+            doVerbose(lambda: Logger().log('File {:s} from {:s} not available (URL Error: {:s})'.format(file, searchurl, str(e.reason)), True, 'RED'), verbose)
+        except Exception as e:
+            doVerbose(lambda: Logger().log('File {:s} from {:s} not available ({:s})'.format(file, searchurl, str(e)), True, 'RED'), verbose)
 
     return downloaded
 
