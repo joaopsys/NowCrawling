@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
+import contextlib
 import os
+import tempfile
 import time
 import sys
-
-__author__ = 'jota'
-
+from urllib.error import ContentTooShortError
 import urllib.request
 import urllib.parse
 from optparse import OptionParser, OptionGroup
@@ -13,6 +13,9 @@ import re
 GOOGLE_SEARCH_URL = "http://google.com/search?%s"
 GOOGLE_SEARCH_REGEX = 'a href="[^\/]*\/\/(?!webcache).*?"'
 GOOGLE_USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36'
+
+GLOBAL_HEADERS = {'User-Agent': GOOGLE_USER_AGENT }
+
 ##    user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7'
 ## GOOGLE_SEARCH_REGEX = 'href="\/url\?q=[^\/]*\/\/(?!webcache).*?&amp'
 SMART_FILE_SEARCH = " intitle:index of "
@@ -108,8 +111,7 @@ def update_progress(progress, prefix='Progress'):
 def crawlGoogle(numres, start, hint, smart):
     query = urllib.parse.urlencode({'num': numres, 'q': (hint+SMART_FILE_SEARCH if smart and SMART_FILE_SEARCH not in hint else hint), "start": start})
     url = GOOGLE_SEARCH_URL % query
-    headers = {'User-Agent': GOOGLE_USER_AGENT, }
-    request = urllib.request.Request(url, None, headers)
+    request = urllib.request.Request(url, None, GLOBAL_HEADERS)
     response = urllib.request.urlopen(request)
     data = str(response.read())
     p = re.compile(GOOGLE_SEARCH_REGEX, re.IGNORECASE)
@@ -132,9 +134,8 @@ def getTypesRe(types):
 # This is Jota's crazy magic trick
 def crawlURLs(crawlurl, tags, userRegex, types, getfiles, verbose, timeout):
     url = crawlurl
-    headers = {'User-Agent': GOOGLE_USER_AGENT, }
 
-    request = urllib.request.Request(url, None, headers)
+    request = urllib.request.Request(url, None, GLOBAL_HEADERS)
     try:
         response = urllib.request.urlopen(request,timeout=timeout)
         data = str(response.read())
@@ -256,6 +257,53 @@ def sizeof_fmt(num, suffix='B'):
 def sizeToStr(filesize):
     return sizeof_fmt(filesize)
 
+
+# Grabbed from some python version. Pycharm fucked it up so I'm not entirely sure which
+# I trimmed it down and removed shit we don't use
+def url_retrieve_with_headers(url, filename=None, headers=None, reporthook=None):
+    url_type, path = urllib.parse.splittype(url)
+    opener = urllib.request.build_opener()
+    if headers:
+        opener.addheaders = list(headers.items())
+    with contextlib.closing(opener.open(url)) as fp:
+        headers = fp.info()
+
+        # Just return the local path and the "headers" for file://
+        # URLs. No sense in performing a copy unless requested.
+        if url_type == "file" and not filename:
+            return os.path.normpath(path), headers
+
+        tfp = open(filename, 'wb')
+
+        with tfp:
+            result = filename, headers
+            bs = 1024*8
+            size = -1
+            read = 0
+            blocknum = 0
+            if "content-length" in headers:
+                size = int(headers["Content-Length"])
+
+            if reporthook:
+                reporthook(blocknum, bs, size)
+
+            while True:
+                block = fp.read(bs)
+                if not block:
+                    break
+                read += len(block)
+                tfp.write(block)
+                blocknum += 1
+                if reporthook:
+                    reporthook(blocknum, bs, size)
+
+    if size >= 0 and read < size:
+        raise ContentTooShortError(
+            "retrieval incomplete: got only %i out of %i bytes"
+            % (read, size), result)
+
+    return result
+
 def downloadFile(file, directory, filename):
     def reporthook(blocknum, bs, size):
         if (size < 0):
@@ -268,11 +316,34 @@ def downloadFile(file, directory, filename):
     except:
         pass
     try:
-        urllib.request.urlretrieve(file, os.path.join(directory, filename), reporthook=reporthook)
+        url_retrieve_with_headers(file, os.path.join(directory, filename), headers=GLOBAL_HEADERS, reporthook=reporthook)
     except KeyboardInterrupt:
         ## FIXME Leave the half-file there? For now let's not be intrusive
         Logger().log('\nDownload of file {:s} interrupted. Continuing...'.format(file),color='YELLOW')
         return
+
+def get_filesize(file, timeout):
+    request = urllib.request.Request(file, None, GLOBAL_HEADERS)
+    meta = urllib.request.urlopen(request, timeout=timeout).info()
+    try:
+        return int(meta.get_all("Content-Length")[0])
+    except TypeError:
+        # No content-length. Weird but possible
+        return -1
+
+def check_filesize_bounds(filesize, minsize, maxsize, limit, verbose):
+    if limit:
+        doVerbose(lambda: Logger().log('Skipping file {:s} because file size cannot be determined.'.format(filename),
+                                       color='YELLOW'), verbose)
+        return False
+
+    if limit and not (minsize <= filesize <= maxsize):
+        doVerbose(
+            lambda: Logger().log('Skipping file {:s} because {:s} is off limits.'.format(filename, sizeToStr(filesize)),
+                                 color='YELLOW'), verbose)
+        return False
+    return True
+
 
 # Download files from downloadurls, respecting conditions, updating file counts and printing info to user
 def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize, directory, verbose, timeout):
@@ -286,38 +357,28 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
         doVerbose(lambda: Logger().log(Logger().log('Checking '+file), verbose))
         filename = urllib.parse.unquote(file.split('/')[-1])
         try:
-            meta = urllib.request.urlopen(file, timeout=timeout).info()
-            try:
-                filesize = int(meta.get_all("Content-Length")[0])
-            except TypeError:
-                # No content-length. Weird but possible
-                filesize = -1
-                if (limit):
-                    doVerbose(lambda: Logger().log('Skipping file {:s} because file size cannot be determined.'.format(filename),color='YELLOW'), verbose)
-                    continue
+            filesize = get_filesize(file, timeout)
 
             # Check filesize
-            if limit and not (minsize <= filesize <= maxsize):
-                doVerbose(lambda: Logger().log('Skipping file {:s} because {:s} is off limits.'.format(filename, sizeToStr(filesize)),color='YELLOW'), verbose)
-                continue
+            if check_filesize_bounds(filesize, minsize, maxsize, limit, verbose):
+                # Check with user
+                if ask:
+                    Logger().log('Download file {:s} of size {:s} from {:s}? [y/n]: '.format(filename, sizeToStr(filesize) if filesize>=0 else 'Unknown', file),color='DARKCYAN')
+                    choice = input().lower()
+                    if choice not in YES:
+                        continue
 
-            # Check with user
-            if ask:
-                Logger().log('Download file {:s} of size {:s} from {:s}? [y/n]: '.format(filename, sizeToStr(filesize) if filesize>=0 else 'Unknown', file),color='DARKCYAN')
-                choice = input().lower()
-                if choice not in YES:
-                    continue
-
-            # Get the file
-            doVerbose(lambda: Logger().log('Downloading file {:s} of size {:s}'.format(filename, sizeToStr(filesize) if filesize>=0 else 'Unknown'),color='GREEN'), verbose)
-            downloadFile(file, directory, filename)
-            doVerbose(lambda: Logger().log('Done downloading file {:s}'.format(filename),color='GREEN'), verbose)
-            downloaded += 1
+                # Get the file
+                doVerbose(lambda: Logger().log('Downloading file {:s} of size {:s}'.format(filename, sizeToStr(filesize) if filesize>=0 else 'Unknown'),color='GREEN'), verbose)
+                downloadFile(file, directory, filename)
+                doVerbose(lambda: Logger().log('Done downloading file {:s}'.format(filename),color='GREEN'), verbose)
+                downloaded += 1
         except KeyboardInterrupt:
             Logger().fatal_error('Interrupted. Exiting...')
         except:
             doVerbose(lambda: Logger().log('File ' + file + ' from ' + searchurl + ' not available', True, 'RED'),
                       verbose)
+            #raise
 
     return downloaded
 
@@ -336,6 +397,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             #googleurls=['http://www.amazon.com/Tchaikovsky-Music-Index-Gerald-Abraham/dp/0781296269']
             ##fixme a good test for forbidden
             #googleurls=['http://0audio.com/downloads/Game%20of%20Thrones%20S01%20Ep%2001-10/']
+            ##FIXME            http://www.newgrounds.com/games spit out a 500 once
             doVerbose(lambda: Logger().log('Fetched {:d} results.'.format(len(googleurls))),verbose)
 
             # Find matches in results. if getfiles, then these are urls
