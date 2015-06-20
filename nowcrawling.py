@@ -343,7 +343,8 @@ def downloadFile(file, directory, filename):
         url_retrieve_with_headers(file, os.path.join(directory, filename), headers=GLOBAL_HEADERS, reporthook=reporthook)
     except KeyboardInterrupt:
         ## FIXME Leave the half-file there? For now let's not be intrusive
-        Logger().log('\nDownload of file {:s} interrupted. Continuing...'.format(file),color='YELLOW')
+        print()
+        Logger().log('Download of file {:s} interrupted. Continuing...'.format(file),color='YELLOW')
         return
 
 # Get the filesize of a given URL with the given timeout and headers
