@@ -331,17 +331,17 @@ def get_filesize(file, timeout):
         # No content-length. Weird but possible
         return -1
 
-def check_filesize_bounds(filesize, minsize, maxsize, limit, verbose):
+def check_filesize_bounds(filesize, filename, minsize, maxsize, limit, verbose):
     if limit:
-        doVerbose(lambda: Logger().log('Skipping file {:s} because file size cannot be determined.'.format(filename),
-                                       color='YELLOW'), verbose)
+        if filesize < 0:
+            doVerbose(lambda: Logger().log('Skipping file {:s} because file size cannot be determined.'.format(filename),color='YELLOW'), verbose)
+            return False
+
+        if not (minsize <= filesize <= maxsize):
+            doVerbose(
+            lambda: Logger().log('Skipping file {:s} because {:s} is off limits.'.format(filename, sizeToStr(filesize)),color='YELLOW'), verbose)
         return False
 
-    if limit and not (minsize <= filesize <= maxsize):
-        doVerbose(
-            lambda: Logger().log('Skipping file {:s} because {:s} is off limits.'.format(filename, sizeToStr(filesize)),
-                                 color='YELLOW'), verbose)
-        return False
     return True
 
 
@@ -360,7 +360,7 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
             filesize = get_filesize(file, timeout)
 
             # Check filesize
-            if check_filesize_bounds(filesize, minsize, maxsize, limit, verbose):
+            if check_filesize_bounds(filesize, filename, minsize, maxsize, limit, verbose):
                 # Check with user
                 if ask:
                     Logger().log('Download file {:s} of size {:s} from {:s}? [y/n]: '.format(filename, sizeToStr(filesize) if filesize>=0 else 'Unknown', file),color='DARKCYAN')
