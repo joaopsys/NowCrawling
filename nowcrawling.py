@@ -441,11 +441,12 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
                 if not matches:
                     doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
                 else:
-                    doVerbose(lambda: Logger().log('Files: \t' + '\n\t'.join(matches)), verbose)
                     # Got results
                     if getfiles:
+                        doVerbose(lambda: Logger().log('Files: \t' + '\n\t'.join(matches)), verbose)
                         downloaded += downloadFiles(downloaded, matches, ask, searchurl, maxfiles, limit,minsize, maxsize, directory,verbose,timeout)
                     else:
+                        doVerbose(lambda: Logger().log('Results: \t' + '\n\t'.join(matches)), verbose)
                         logKeywordMatches(matches, contentFile)
 
             # If google gave us less results than we asked for, then we've reached the end
