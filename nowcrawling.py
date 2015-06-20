@@ -230,13 +230,13 @@ def read_data_from_url(url, timeout, headers, verbose):
         return str(response.read())
     except KeyboardInterrupt:
         Logger().fatal_error('Interrupted. Exiting...')
-        return None
     except HTTPError as e:
         doVerbose(lambda: Logger().log('URL {:s} not available or timed out ({:d})'.format(url, e.code), True, 'RED'),verbose)
     except URLError as e:
         doVerbose(lambda: Logger().log('URL {:s} not available or timed out (URL Error: {:s})'.format(url, str(e.reason)),True, 'RED'), verbose)
     except Exception as e:
         doVerbose(lambda: Logger().log('URL {:s} not available or timed out ({:s})'.format(url, str(e)),True, 'RED'), verbose)
+    return None
 
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
