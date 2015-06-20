@@ -251,9 +251,10 @@ def read_data_from_url(url, timeout, headers, verbose):
 def crawlGoogle(numres, start, query, doSmartSearch):
     query = urllib.parse.urlencode({'num': numres, 'q': (query+SMART_FILE_SEARCH if doSmartSearch and SMART_FILE_SEARCH not in query else query), "start": start})
     url = GOOGLE_SEARCH_URL % query
-    request = urllib.request.Request(url, None, GLOBAL_HEADERS)
-    response = urllib.request.urlopen(request)
-    data = str(response.read())
+    data = read_data_from_url(url, None, GLOBAL_HEADERS, True)
+    if not data:
+        Logger().fatal_error('Cannot crawl google (perhaps a temporary ban?). Quitting.')
+
     p = re.compile(GOOGLE_SEARCH_REGEX, re.IGNORECASE)
 
     ##return list(set(x.replace('href="/url?q=', '').replace('HREF="/url?q=', '').replace('"', '').replace('&amp', '') for x in p.findall(data)))
