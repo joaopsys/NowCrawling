@@ -363,7 +363,7 @@ def check_filesize_bounds(filesize, filename, minsize, maxsize, limit, verbose):
         if not (minsize <= filesize <= maxsize):
             doVerbose(
             lambda: Logger().log('Skipping file {:s} because {:s} is off limits.'.format(filename, humanReadableSize(filesize)),color='YELLOW'), verbose)
-        return False
+            return False
 
     return True
 
@@ -376,7 +376,7 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
             doVerbose(lambda: Logger().log('All files have been downloaded. Exiting...', True, 'GREEN'), verbose)
             exit()
 
-        doVerbose(lambda: Logger().log(Logger().log('Checking '+file), verbose))
+        doVerbose(lambda: Logger().log('Checking '+file), verbose)
         filename = urllib.parse.unquote(file.split('/')[-1])
         try:
             filesize = get_filesize(file, timeout, GLOBAL_HEADERS)
