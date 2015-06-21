@@ -284,7 +284,7 @@ def build_regex(getfiles, tags, userRegex, types):
         return userRegex
 
 # This is Jota's crazy magic trick
-def crawlURLs(crawlurl, tags, userRegex, types, getfiles, verbose, timeout):
+def crawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, timeout):
     data = read_data_from_url(crawlurl, timeout, GLOBAL_HEADERS, verbose)
     if not data:
         return []
@@ -442,7 +442,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             # Find matches in results. if getfiles, then these are urls
             for searchurl in googleurls:
                 doVerbose(lambda: Logger().log('Crawling into '+searchurl+' ...'), verbose)
-                matches = crawlURLs(searchurl, tags, regex, extensions, getfiles, verbose, timeout)
+                matches = crawlURLForMatches(searchurl, tags, regex, extensions, getfiles, verbose, timeout)
                 doVerbose(lambda: Logger().log('Done crawling {:s}.'.format(searchurl)), verbose)
                 urllib.request.urlcleanup()
                 if not matches:
