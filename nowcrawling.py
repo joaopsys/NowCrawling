@@ -48,6 +48,8 @@ DEFAULT_URL_TIMEOUT = 7
 # Maximum file size, in bytes, allowed. This is used when no upper bound/limit is given.
 MAX_FILE_SIZE = 2**50
 
+ALL_VISITED_URLS=[]
+
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
 # UTILITY STUFF
@@ -78,12 +80,12 @@ class Logger:
     def get_timestamp(self):
         return time.strftime('%Y/%m/%d %H:%M:%S')
 
-    def log ( self, message, is_bold=False, color='', log_time=True):
+    def log ( self, message, is_bold=False, color='', log_time=True, indentation_level=0):
         prefix = ''
         suffix = ''
 
         if log_time:
-            prefix += '[{:s}] '.format(self.get_timestamp())
+            prefix += '[{:s}] {:s}'.format(self.get_timestamp(), '...'*indentation_level)
 
         if os.name == 'posix':
             if is_bold:
@@ -97,11 +99,11 @@ class Logger:
         sys.stdout.flush()
 
 
-    def error(self, err):
-        self.log(err, True, 'RED')
+    def error(self, err, log_time=True, indentation_level=0):
+        self.log(err, True, 'RED', log_time, indentation_level)
 
-    def fatal_error(self, err):
-        self.error(err)
+    def fatal_error(self, err, log_time=True, indentation_level=0):
+        self.error(err, log_time, indentation_level)
         exit()
 
 #------------------------------------------------------------------------------
@@ -223,19 +225,19 @@ def url_retrieve_with_headers(url, filename=None, headers=None, reporthook=None)
 # producing a fatal error if needed. In case there is a timeout or the data
 # is not available, print a message and return None
 #------------------------------------------------------------------------------
-def read_data_from_url(url, timeout, headers, verbose):
+def read_data_from_url(url, timeout, headers, verbose, indentation_level=0):
     request = urllib.request.Request(url, None, headers)
     try:
         response = urllib.request.urlopen(request,timeout=timeout)
         return str(response.read())
     except KeyboardInterrupt:
-        Logger().fatal_error('Interrupted. Exiting...')
+        Logger().fatal_error('Interrupted. Exiting...', indentation_level=indentation_level)
     except HTTPError as e:
-        doVerbose(lambda: Logger().log('URL {:s} not available or timed out ({:d})'.format(url, e.code), True, 'RED'),verbose)
+        doVerbose(lambda: Logger().log('URL {:s} not available or timed out ({:d})'.format(url, e.code), True, 'RED', indentation_level=indentation_level),verbose)
     except URLError as e:
-        doVerbose(lambda: Logger().log('URL {:s} not available or timed out (URL Error: {:s})'.format(url, str(e.reason)),True, 'RED'), verbose)
+        doVerbose(lambda: Logger().log('URL {:s} not available or timed out (URL Error: {:s})'.format(url, str(e.reason)),True, 'RED', indentation_level=indentation_level), verbose)
     except Exception as e:
-        doVerbose(lambda: Logger().log('URL {:s} not available or timed out ({:s})'.format(url, str(e)),True, 'RED'), verbose)
+        doVerbose(lambda: Logger().log('URL {:s} not available or timed out ({:s})'.format(url, str(e)),True, 'RED', indentation_level=indentation_level), verbose)
     return None
 
 #------------------------------------------------------------------------------
@@ -290,55 +292,58 @@ def findRecursableURLS(text):
 
     return list(set(x.replace('a href=', '').replace('a HREF=', '').replace('"', '').replace('A HREF=', '') for x in p.findall(text)))
 
-def recursiveCrawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, timeout, maxDepth=3, visitedUrls=[]):
+def recursiveCrawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, timeout, currentDepth=0, maxDepth=2, visitedUrls=[]):
     # Stop if we have exceeded maxDepth
-    if maxDepth == 0:
+    if currentDepth > maxDepth:
         return []
+
+    if maxDepth != 0:
+        doVerbose(lambda: Logger().log('Recursively crawling into {:s} (depth {:d}, max depth {:d}).'.format(crawlurl, currentDepth+1, maxDepth+1), indentation_level=currentDepth),verbose)
+    else:
+        doVerbose(lambda: Logger().log('Crawling into {:s}'.format(crawlurl), indentation_level=currentDepth), verbose)
 
     visitedUrls += [crawlurl]
 
-    data = read_data_from_url(crawlurl, timeout, GLOBAL_HEADERS, verbose)
+    data = read_data_from_url(crawlurl, timeout, GLOBAL_HEADERS, verbose, currentDepth)
     if not data:
-        doVerbose(lambda: Logger().log('Could not access {:s}.'.format(crawlurl)), verbose)
+        doVerbose(lambda: Logger().log('Could not access {:s}.'.format(crawlurl), indentation_level=currentDepth), verbose)
         return []
 
 
-    if maxDepth > 1:
-        doVerbose(lambda: Logger().log('Looking for URLs in {:s}.'.format(crawlurl)), verbose)
+    if currentDepth < maxDepth:
         urls = [i for i in findRecursableURLS(data) if i not in visitedUrls]
     else:
-        doVerbose(lambda: Logger().log('Max depth reached, not listing URLs and not recursing.'), verbose)
+        if maxDepth != 0:
+            doVerbose(lambda: Logger().log('Max depth reached, not listing URLs and not recursing.', indentation_level=currentDepth), verbose)
 
-    doVerbose(lambda: Logger().log('Visiting {:s}...'.format(crawlurl)), verbose)
-    matches = crawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, timeout, data)
-    doVerbose(lambda: Logger().log('Done visiting {:s}...'.format(crawlurl)), verbose)
+    matches = crawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, timeout, currentDepth+1, data)
 
-    if maxDepth > 1:
+    if currentDepth < maxDepth:
         if not urls:
-            doVerbose(lambda: Logger().log('No URLs found in this page.'), verbose)
+            doVerbose(lambda: Logger().log('No URLs found in {:s}: '.format(crawlurl), indentation_level=currentDepth), verbose)
 
         else:
-            doVerbose(lambda: Logger().log('Recursable non-visited URLs found in this page: \t' + '\n\t'.join(urls)), verbose)
+            doVerbose(lambda: Logger().log('Recursable non-visited URLs found in {:s}: '.format(crawlurl) + ', '.join(urls), indentation_level=currentDepth), verbose)
             for url in urls:
-                doVerbose(lambda: Logger().log('Crawling into {:s} ...'.format(url)), verbose)
-                matches += recursiveCrawlURLForMatches(url, tags, userRegex, types, getfiles, verbose, timeout, maxDepth-1, visitedUrls)
-                doVerbose(lambda: Logger().log('Done crawling {:s}.'.format(url)), verbose)
+                matches += recursiveCrawlURLForMatches(url, tags, userRegex, types, getfiles, verbose, timeout, currentDepth+1, maxDepth, visitedUrls)
     return matches
 
 # This is Jota's crazy magic trick
-def crawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, timeout, data=None):
+def crawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, timeout, indentationLevel, data=None):
+    doVerbose(lambda: Logger().log('Looking for matches in {:s} ...'.format(crawlurl), indentation_level=indentationLevel), verbose)
     if not data:
-        data = read_data_from_url(crawlurl, timeout, GLOBAL_HEADERS, verbose)
+        data = read_data_from_url(crawlurl, timeout, GLOBAL_HEADERS, verbose, indentationLevel)
     if not data:
         return []
 
-    doVerbose(lambda: Logger().log('Page downloaded. Checking...'), verbose)
+    doVerbose(lambda: Logger().log('Page downloaded. Checking...', indentation_level=indentationLevel), verbose)
 
     regex = build_regex(getfiles, tags, userRegex, types)
     p = re.compile(regex, re.IGNORECASE)
 
     tuples = p.findall(data)
     if not tuples:
+        doVerbose(lambda: Logger().log('Done looking for matches in {:s}... Found no matches.'.format(crawlurl), indentation_level=indentationLevel), verbose)
         return []
 
     if getfiles:
@@ -352,7 +357,9 @@ def crawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, time
         else:
             prettyurls = list(x for x in tuples)
 
-    return list(set(prettyurls))
+    matches = list(set(prettyurls))
+    doVerbose(lambda: Logger().log('Done looking for matches in {:s}...Found {:d} matches.'.format(crawlurl, len(matches)), indentation_level=indentationLevel), verbose)
+    return matches
 
 def getMinMaxSizeFromLimit(limit):
     if limit:
@@ -463,7 +470,7 @@ def logKeywordMatches(matches, contentFile):
                 f.write(match + "\n")
 
 
-def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, directory, contentFile, verbose, timeout):
+def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, directory, contentFile, verbose, timeout, recursion_depth):
     downloaded = 0
     start = 0
     minsize, maxsize = getMinMaxSizeFromLimit(limit)
@@ -484,9 +491,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
 
             # Find matches in results. if getfiles, then these are urls
             for searchurl in googleurls:
-                doVerbose(lambda: Logger().log('Crawling into '+searchurl+' ...'), verbose)
-                matches = recursiveCrawlURLForMatches(searchurl, tags, regex, extensions, getfiles, verbose, timeout)
-                doVerbose(lambda: Logger().log('Done crawling {:s}.'.format(searchurl)), verbose)
+                matches = recursiveCrawlURLForMatches(searchurl, tags, regex, extensions, getfiles, verbose, timeout, maxDepth=recursion_depth ,visitedUrls=ALL_VISITED_URLS)
                 urllib.request.urlcleanup()
                 if not matches:
                     doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
@@ -520,6 +525,7 @@ def parse_input():
     parser.add_option('-c', '--content', help='Crawl for content (words, strings, pages, regexes)', action="store_false", dest="getfiles")
     parser.add_option('-k', '--keywords', help='(Required) A quoted list of words separated by spaces which will be the search terms of the crawler', dest='keywords', type='string')
     parser.add_option('-i', '--ignore-after', help='Time (in seconds) for an URL to be considered down (Default: 7)', dest='timeout', type='int', default=DEFAULT_URL_TIMEOUT)
+    parser.add_option('-z', '--recursion-depth', help='Recursion depth (starts at 1, which means no recursion). Default: 1', dest='recursion_depth', type='int', default=1)
     parser.add_option('-v', '--verbose', help='Display all error/warning/info messages', action="store_true", dest="verbose",default=False)
 
     filesgroup = OptionGroup(parser, "Files (-f) Crawler Arguments")
@@ -563,7 +569,10 @@ def parse_input():
     if options.getfiles and options.contentFile:
         parser.error('Options -o can only be used when crawling for content.')
 
-    return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.directory, options.contentFile, options.verbose, options.timeout
+    # Adjust the offset (we expect it to start at 1)
+    options.recursion_depth -= 1
+
+    return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.directory, options.contentFile, options.verbose, options.timeout, options.recursion_depth
 
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
