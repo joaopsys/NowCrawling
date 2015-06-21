@@ -283,9 +283,52 @@ def build_regex(getfiles, tags, userRegex, types):
     else:
         return userRegex
 
-# This is Jota's crazy magic trick
-def crawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, timeout):
+
+def findRecursableURLS(text):
+    #FIXME: Implement this
+    p = re.compile(GOOGLE_SEARCH_REGEX, re.IGNORECASE)
+
+    return list(set(x.replace('a href=', '').replace('a HREF=', '').replace('"', '').replace('A HREF=', '') for x in p.findall(text)))
+
+def recursiveCrawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, timeout, maxDepth=3, visitedUrls=[]):
+    # Stop if we have exceeded maxDepth
+    if maxDepth == 0:
+        return []
+
+    visitedUrls += [crawlurl]
+
     data = read_data_from_url(crawlurl, timeout, GLOBAL_HEADERS, verbose)
+    if not data:
+        doVerbose(lambda: Logger().log('Could not access {:s}.'.format(crawlurl)), verbose)
+        return []
+
+
+    if maxDepth > 1:
+        doVerbose(lambda: Logger().log('Looking for URLs in {:s}.'.format(crawlurl)), verbose)
+        urls = [i for i in findRecursableURLS(data) if i not in visitedUrls]
+    else:
+        doVerbose(lambda: Logger().log('Max depth reached, not listing URLs and not recursing.'), verbose)
+
+    doVerbose(lambda: Logger().log('Visiting {:s}...'.format(crawlurl)), verbose)
+    matches = crawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, timeout, data)
+    doVerbose(lambda: Logger().log('Done visiting {:s}...'.format(crawlurl)), verbose)
+
+    if maxDepth > 1:
+        if not urls:
+            doVerbose(lambda: Logger().log('No URLs found in this page.'), verbose)
+
+        else:
+            doVerbose(lambda: Logger().log('Recursable non-visited URLs found in this page: \t' + '\n\t'.join(urls)), verbose)
+            for url in urls:
+                doVerbose(lambda: Logger().log('Crawling into {:s} ...'.format(url)), verbose)
+                matches += recursiveCrawlURLForMatches(url, tags, userRegex, types, getfiles, verbose, timeout, maxDepth-1, visitedUrls)
+                doVerbose(lambda: Logger().log('Done crawling {:s}.'.format(url)), verbose)
+    return matches
+
+# This is Jota's crazy magic trick
+def crawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, timeout, data=None):
+    if not data:
+        data = read_data_from_url(crawlurl, timeout, GLOBAL_HEADERS, verbose)
     if not data:
         return []
 
@@ -442,7 +485,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             # Find matches in results. if getfiles, then these are urls
             for searchurl in googleurls:
                 doVerbose(lambda: Logger().log('Crawling into '+searchurl+' ...'), verbose)
-                matches = crawlURLForMatches(searchurl, tags, regex, extensions, getfiles, verbose, timeout)
+                matches = recursiveCrawlURLForMatches(searchurl, tags, regex, extensions, getfiles, verbose, timeout)
                 doVerbose(lambda: Logger().log('Done crawling {:s}.'.format(searchurl)), verbose)
                 urllib.request.urlcleanup()
                 if not matches:
