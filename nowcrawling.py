@@ -354,7 +354,7 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
             doVerbose(lambda: Logger().log('All files have been downloaded. Exiting...', True, 'GREEN'), verbose)
             exit()
 
-        doVerbose(lambda: Logger().log(Logger().log('Checking '+file), verbose))
+        doVerbose(lambda: Logger().log('Checking '+file), verbose)
         filename = urllib.parse.unquote(file.split('/')[-1])
         try:
             filesize = get_filesize(file, timeout)
