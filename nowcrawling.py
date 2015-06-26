@@ -340,7 +340,7 @@ def check_filesize_bounds(filesize, filename, minsize, maxsize, limit, verbose):
         if not (minsize <= filesize <= maxsize):
             doVerbose(
             lambda: Logger().log('Skipping file {:s} because {:s} is off limits.'.format(filename, sizeToStr(filesize)),color='YELLOW'), verbose)
-        return False
+            return False
 
     return True
 
