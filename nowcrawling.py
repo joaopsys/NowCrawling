@@ -423,7 +423,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
     start = 0
     minsize, maxsize = getMinMaxSizeFromLimit(limit)
     compiled_regex,regex_str = build_regex(getfiles, tags, regex, extensions)
-    doVerbose(lambda: Logger().log('Search regex: ->\'{:s}\'<-.'.format(regex_str)), verbose)
+    doVerbose(lambda: Logger().log('Search regex: ->\'{:s}\'<-.'.format(regex_str.replace('\n','\\n').replace('\t','\\t'))), verbose)
     try:
         while True:
             # Fetch results
