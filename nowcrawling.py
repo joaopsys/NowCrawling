@@ -228,6 +228,7 @@ def url_retrieve_with_headers(url, filename=None, headers=None, reporthook=None)
 def read_data_from_url(url, timeout, headers, verbose, indentation_level=0):
     request = urllib.request.Request(url, None, headers)
     try:
+        request = urllib.request.Request(url, None, headers)
         response = urllib.request.urlopen(request,timeout=timeout)
         return str(response.read())
     except KeyboardInterrupt:
@@ -275,15 +276,16 @@ def getTypesRe(types):
     return types.replace(' ', '|')
 
 def build_regex(getfiles, tags, userRegex, types):
+    regex_str = userRegex
     if getfiles:
         if not tags and not userRegex:
-            return FILE_REGEX.replace('tagholder', '').replace('typeholder', getTypesRe(types)).replace('holdertag','')
+            regex_str = FILE_REGEX.replace('tagholder', '').replace('typeholder', getTypesRe(types)).replace('holdertag','')
         elif tags:
-            return FILE_REGEX.replace('tagholder', getTagsRe(tags, 1)).replace('typeholder', getTypesRe(types)).replace('holdertag',getTagsRe(tags, 2))
+            regex_str = FILE_REGEX.replace('tagholder', getTagsRe(tags, 1)).replace('typeholder', getTypesRe(types)).replace('holdertag',getTagsRe(tags, 2))
         else:
-            return FILE_REGEX.replace('tagholder', userRegex).replace('typeholder', getTypesRe(types)).replace('holdertag', userRegex)
-    else:
-        return userRegex
+            regex_str = FILE_REGEX.replace('tagholder', userRegex).replace('typeholder', getTypesRe(types)).replace('holdertag', userRegex)
+
+    return re.compile(regex_str),regex_str
 
 
 def findRecursableURLS(text):
@@ -292,7 +294,7 @@ def findRecursableURLS(text):
 
     return list(set(x.replace('a href=', '').replace('a HREF=', '').replace('"', '').replace('A HREF=', '') for x in p.findall(text)))
 
-def recursiveCrawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, timeout, currentDepth=0, maxDepth=2, visitedUrls=[]):
+def recursiveCrawlURLForMatches(crawlurl, compiled_regex, getfiles, verbose, timeout, currentDepth=0, maxDepth=2, visitedUrls=[]):
     # Stop if we have exceeded maxDepth
     if currentDepth > maxDepth:
         return []
@@ -316,7 +318,7 @@ def recursiveCrawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verb
         if maxDepth != 0:
             doVerbose(lambda: Logger().log('Max depth reached, not listing URLs and not recursing.', indentation_level=currentDepth), verbose)
 
-    matches = crawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, timeout, currentDepth+1, data)
+    matches = crawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, currentDepth+1, data)
 
     if currentDepth < maxDepth:
         if not urls:
@@ -325,11 +327,11 @@ def recursiveCrawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verb
         else:
             doVerbose(lambda: Logger().log('Recursable non-visited URLs found in {:s}: '.format(crawlurl) + ', '.join(urls), indentation_level=currentDepth), verbose)
             for url in urls:
-                matches += recursiveCrawlURLForMatches(url, tags, userRegex, types, getfiles, verbose, timeout, currentDepth+1, maxDepth, visitedUrls)
+                matches += recursiveCrawlURLForMatches(url, getfiles, compiled_regex, verbose, timeout, currentDepth+1, maxDepth, visitedUrls)
     return matches
 
 # This is Jota's crazy magic trick
-def crawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, timeout, indentationLevel, data=None):
+def crawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, indentationLevel, data=None):
     doVerbose(lambda: Logger().log('Looking for matches in {:s} ...'.format(crawlurl), indentation_level=indentationLevel), verbose)
     if not data:
         data = read_data_from_url(crawlurl, timeout, GLOBAL_HEADERS, verbose, indentationLevel)
@@ -338,10 +340,7 @@ def crawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, time
 
     doVerbose(lambda: Logger().log('Page downloaded. Checking...', indentation_level=indentationLevel), verbose)
 
-    regex = build_regex(getfiles, tags, userRegex, types)
-    p = re.compile(regex, re.IGNORECASE)
-
-    tuples = p.findall(data)
+    tuples = compiled_regex.findall(data)
     if not tuples:
         doVerbose(lambda: Logger().log('Done looking for matches in {:s}... Found no matches.'.format(crawlurl), indentation_level=indentationLevel), verbose)
         return []
@@ -474,6 +473,8 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
     downloaded = 0
     start = 0
     minsize, maxsize = getMinMaxSizeFromLimit(limit)
+    compiled_regex,regex_str = build_regex(getfiles, tags, regex, extensions)
+    doVerbose(lambda: Logger().log('Search regex: ->\'{:s}\'<-.'.format(regex_str.replace('\n','\\n').replace('\t','\\t'))), verbose)
     try:
         while True:
             # Fetch results
@@ -491,7 +492,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
 
             # Find matches in results. if getfiles, then these are urls
             for searchurl in googleurls:
-                matches = recursiveCrawlURLForMatches(searchurl, tags, regex, extensions, getfiles, verbose, timeout, maxDepth=recursion_depth ,visitedUrls=ALL_VISITED_URLS)
+                matches = recursiveCrawlURLForMatches(searchurl, compiled_regex, getfiles, verbose, timeout, maxDepth=recursion_depth ,visitedUrls=ALL_VISITED_URLS)
                 urllib.request.urlcleanup()
                 if not matches:
                     doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
