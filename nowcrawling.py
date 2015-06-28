@@ -226,7 +226,7 @@ def url_retrieve_with_headers(url, filename=None, headers=None, reporthook=None)
 # is not available, print a message and return None
 #------------------------------------------------------------------------------
 def read_data_from_url(url, timeout, headers, verbose, indentation_level=0):
-    request = urllib.request.Request(url, None, headers)
+
     try:
         request = urllib.request.Request(url, None, headers)
         response = urllib.request.urlopen(request,timeout=timeout)
@@ -294,7 +294,7 @@ def findRecursableURLS(text):
 
     return list(set(x.replace('a href=', '').replace('a HREF=', '').replace('"', '').replace('A HREF=', '') for x in p.findall(text)))
 
-def recursiveCrawlURLForMatches(crawlurl, compiled_regex, getfiles, verbose, timeout, currentDepth=0, maxDepth=2, visitedUrls=[]):
+def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, currentDepth=0, maxDepth=2, visitedUrls=[]):
     # Stop if we have exceeded maxDepth
     if currentDepth > maxDepth:
         return []
@@ -439,7 +439,7 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
             if check_filesize_bounds(filesize, filename, minsize, maxsize, limit, verbose):
                 # Check with user
                 if ask:
-                    Logger().log('Download file {:s} of size {:s} from {:s}? [y/n]: '.format(filename, humanReadableSize(filesize) if filesize>=0 else 'Unknown', file),color='DARKCYAN')
+                    Logger().log('Download file {:s} of size {:s} from {:s} [real source: {:s}]? [y/n]: '.format(filename, humanReadableSize(filesize) if filesize>=0 else 'Unknown', file, sourceurl),color='DARKCYAN')
                     choice = input().lower()
                     if choice not in YES:
                         continue
@@ -492,7 +492,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
 
             # Find matches in results. if getfiles, then these are urls
             for searchurl in googleurls:
-                matches = recursiveCrawlURLForMatches(searchurl, compiled_regex, getfiles, verbose, timeout, maxDepth=recursion_depth ,visitedUrls=ALL_VISITED_URLS)
+                matches = recursiveCrawlURLForMatches(searchurl, getfiles, compiled_regex, verbose, timeout, maxDepth=recursion_depth ,visitedUrls=ALL_VISITED_URLS)
                 urllib.request.urlcleanup()
                 if not matches:
                     doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
