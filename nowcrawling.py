@@ -224,8 +224,8 @@ def url_retrieve_with_headers(url, filename=None, headers=None, reporthook=None)
 # is not available, print a message and return None
 #------------------------------------------------------------------------------
 def read_data_from_url(url, timeout, headers, verbose):
-    request = urllib.request.Request(url, None, headers)
     try:
+        request = urllib.request.Request(url, None, headers)
         response = urllib.request.urlopen(request,timeout=timeout)
         return str(response.read())
     except KeyboardInterrupt:
