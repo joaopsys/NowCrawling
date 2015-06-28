@@ -224,8 +224,8 @@ def url_retrieve_with_headers(url, filename=None, headers=None, reporthook=None)
 # is not available, print a message and return None
 #------------------------------------------------------------------------------
 def read_data_from_url(url, timeout, headers, verbose):
-    request = urllib.request.Request(url, None, headers)
     try:
+        request = urllib.request.Request(url, None, headers)
         response = urllib.request.urlopen(request,timeout=timeout)
         return str(response.read())
     except KeyboardInterrupt:
@@ -273,28 +273,26 @@ def getTypesRe(types):
     return types.replace(' ', '|')
 
 def build_regex(getfiles, tags, userRegex, types):
+    regex_str = userRegex
     if getfiles:
         if not tags and not userRegex:
-            return FILE_REGEX.replace('tagholder', '').replace('typeholder', getTypesRe(types)).replace('holdertag','')
+            regex_str = FILE_REGEX.replace('tagholder', '').replace('typeholder', getTypesRe(types)).replace('holdertag','')
         elif tags:
-            return FILE_REGEX.replace('tagholder', getTagsRe(tags, 1)).replace('typeholder', getTypesRe(types)).replace('holdertag',getTagsRe(tags, 2))
+            regex_str = FILE_REGEX.replace('tagholder', getTagsRe(tags, 1)).replace('typeholder', getTypesRe(types)).replace('holdertag',getTagsRe(tags, 2))
         else:
-            return FILE_REGEX.replace('tagholder', userRegex).replace('typeholder', getTypesRe(types)).replace('holdertag', userRegex)
-    else:
-        return userRegex
+            regex_str = FILE_REGEX.replace('tagholder', userRegex).replace('typeholder', getTypesRe(types)).replace('holdertag', userRegex)
+
+    return re.compile(regex_str),regex_str
 
 # This is Jota's crazy magic trick
-def crawlURLForMatches(crawlurl, tags, userRegex, types, getfiles, verbose, timeout):
+def crawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout):
     data = read_data_from_url(crawlurl, timeout, GLOBAL_HEADERS, verbose)
     if not data:
         return []
 
     doVerbose(lambda: Logger().log('Page downloaded. Checking...'), verbose)
 
-    regex = build_regex(getfiles, tags, userRegex, types)
-    p = re.compile(regex, re.IGNORECASE)
-
-    tuples = p.findall(data)
+    tuples = compiled_regex.findall(data)
     if not tuples:
         return []
 
@@ -424,6 +422,8 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
     downloaded = 0
     start = 0
     minsize, maxsize = getMinMaxSizeFromLimit(limit)
+    compiled_regex,regex_str = build_regex(getfiles, tags, regex, extensions)
+    doVerbose(lambda: Logger().log('Search regex: ->\'{:s}\'<-.'.format(regex_str.replace('\n','\\n').replace('\t','\\t'))), verbose)
     try:
         while True:
             # Fetch results
@@ -442,7 +442,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             # Find matches in results. if getfiles, then these are urls
             for searchurl in googleurls:
                 doVerbose(lambda: Logger().log('Crawling into '+searchurl+' ...'), verbose)
-                matches = crawlURLForMatches(searchurl, tags, regex, extensions, getfiles, verbose, timeout)
+                matches = crawlURLForMatches(searchurl, getfiles, compiled_regex, verbose, timeout)
                 doVerbose(lambda: Logger().log('Done crawling {:s}.'.format(searchurl)), verbose)
                 urllib.request.urlcleanup()
                 if not matches:
