@@ -299,7 +299,10 @@ def crawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout):
     if getfiles:
         tuples = [j[i] for j in tuples for i in range(len(j)) if '.' in j[i]]
         prettyurls = list(x.replace('href=', '').replace('HREF=', '').replace('"', '').replace('\'', '').replace('\\', '') for x in tuples)
-        prettyurls = list(crawlurl+x if "://" not in x else x for x in prettyurls)
+
+        # Resolve all URLs (might be relative, absolute, prepended with //, and others. urlib.parse.urljoin deals with
+        # this for us)
+        prettyurls = [urllib.parse.urljoin(crawlurl,url) for url in prettyurls ]
     else:
         ## RETURN EVERYTHING IF TUPLES
         if isinstance(tuples[0],tuple):
