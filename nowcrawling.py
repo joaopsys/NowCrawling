@@ -294,21 +294,21 @@ def findRecursableURLS(text):
 
     return list(set(x.replace('a href=', '').replace('a HREF=', '').replace('"', '').replace('A HREF=', '') for x in p.findall(text)))
 
-def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, currentDepth=0, maxDepth=2, visitedUrls=[]):
+def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, currentDepth=0, maxDepth=2, visitedUrls=[], prepend=''):
     # Stop if we have exceeded maxDepth
     if currentDepth > maxDepth:
         return []
 
     if maxDepth != 0:
-        doVerbose(lambda: Logger().log('Recursively crawling into {:s} (depth {:d}, max depth {:d}).'.format(crawlurl, currentDepth+1, maxDepth+1), indentation_level=currentDepth),verbose)
+        doVerbose(lambda: Logger().log('{:s}Recursively crawling into {:s} (depth {:d}, max depth {:d}).'.format(prepend,crawlurl, currentDepth+1, maxDepth+1), indentation_level=currentDepth),verbose)
     else:
-        doVerbose(lambda: Logger().log('Crawling into {:s}'.format(crawlurl), indentation_level=currentDepth), verbose)
+        doVerbose(lambda: Logger().log('{:s}Crawling into {:s}'.format(prepend,crawlurl), indentation_level=currentDepth), verbose)
 
     visitedUrls += [crawlurl]
 
     data = read_data_from_url(crawlurl, timeout, GLOBAL_HEADERS, verbose, currentDepth)
     if not data:
-        doVerbose(lambda: Logger().log('Could not access {:s}.'.format(crawlurl), indentation_level=currentDepth), verbose)
+        doVerbose(lambda: Logger().log('{:s}Could not access {:s}.'.format(prepend,crawlurl), indentation_level=currentDepth), verbose)
         return []
 
 
@@ -316,18 +316,19 @@ def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, tim
         urls = [url for url in findRecursableURLS(data) if url not in visitedUrls]
     else:
         if maxDepth != 0:
-            doVerbose(lambda: Logger().log('Max depth reached, not listing URLs and not recursing.', indentation_level=currentDepth), verbose)
+            doVerbose(lambda: Logger().log('{:s}Max depth reached, not listing URLs and not recursing.'.format(prepend), indentation_level=currentDepth), verbose)
 
     matches = crawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, currentDepth+1, data)
 
     if currentDepth < maxDepth:
         if not urls:
-            doVerbose(lambda: Logger().log('No URLs found in {:s}: '.format(crawlurl), indentation_level=currentDepth), verbose)
+            doVerbose(lambda: Logger().log('{:s}No URLs found in {:s}: '.format(prepend,crawlurl), indentation_level=currentDepth), verbose)
 
         else:
-            doVerbose(lambda: Logger().log('Recursable non-visited URLs found in {:s}: '.format(crawlurl) + ', '.join(urls), indentation_level=currentDepth), verbose)
-            for url in urls:
-                matches += recursiveCrawlURLForMatches(url, getfiles, compiled_regex, verbose, timeout, currentDepth+1, maxDepth, visitedUrls)
+            doVerbose(lambda: Logger().log('{:s}Recursable non-visited URLs found in {:s}: '.format(prepend,crawlurl) + ', '.join(urls), indentation_level=currentDepth), verbose)
+            for url_number,url in enumerate(urls):
+                recurse_prepend = prepend[:-2] + ', {:d}/{:d}] '.format(url_number+1, len(urls))
+                matches += recursiveCrawlURLForMatches(url, getfiles, compiled_regex, verbose, timeout, currentDepth+1, maxDepth, visitedUrls, recurse_prepend)
     return matches
 
 # This is Jota's crazy magic trick
@@ -494,8 +495,8 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             doVerbose(lambda: Logger().log('Fetched {:d} results.'.format(len(googleurls))),verbose)
 
             # Find matches in results. if getfiles, then these are urls
-            for searchurl in googleurls:
-                matches = recursiveCrawlURLForMatches(searchurl, getfiles, compiled_regex, verbose, timeout, maxDepth=recursion_depth ,visitedUrls=ALL_VISITED_URLS)
+            for url_number,searchurl in enumerate(googleurls):
+                matches = recursiveCrawlURLForMatches(searchurl, getfiles, compiled_regex, verbose, timeout, maxDepth=recursion_depth ,visitedUrls=ALL_VISITED_URLS, prepend='[{:d}/{:d}] '.format(url_number+1, len(googleurls)))
                 urllib.request.urlcleanup()
                 if not matches:
                     doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
