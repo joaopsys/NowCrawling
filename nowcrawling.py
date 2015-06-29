@@ -313,7 +313,7 @@ def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, tim
 
 
     if currentDepth < maxDepth:
-        urls = [i for i in findRecursableURLS(data) if i not in visitedUrls]
+        urls = [url for url in findRecursableURLS(data) if url not in visitedUrls]
     else:
         if maxDepth != 0:
             doVerbose(lambda: Logger().log('Max depth reached, not listing URLs and not recursing.', indentation_level=currentDepth), verbose)
