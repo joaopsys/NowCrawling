@@ -358,7 +358,7 @@ def crawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, ind
 
     matches = list(set(prettyurls))
     doVerbose(lambda: Logger().log('Done looking for matches in {:s}...Found {:d} matches.'.format(crawlurl, len(matches)), indentation_level=indentationLevel), verbose)
-    return matches
+    return [[i,crawlurl] for i in matches]
 
 def getMinMaxSizeFromLimit(limit):
     if limit:
@@ -423,7 +423,7 @@ def check_filesize_bounds(filesize, filename, minsize, maxsize, limit, verbose):
 
 # Download files from downloadurls, respecting conditions, updating file counts and printing info to user
 def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,minsize, maxsize, directory, verbose, timeout):
-    for file in downloadurls:
+    for file,sourceurl in downloadurls:
 
         # Check if we've reached the maximum number of files
         if maxfiles and downloaded >= maxfiles:
@@ -499,7 +499,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
                 else:
                     # Got results
                     if getfiles:
-                        doVerbose(lambda: Logger().log('Files: \t' + '\n\t'.join(matches)), verbose)
+                        doVerbose(lambda: Logger().log('Files: \t' + '\n\t'.join([i[0] for i in matches])), verbose)
                         downloaded += downloadFiles(downloaded, matches, ask, searchurl, maxfiles, limit,minsize, maxsize, directory,verbose,timeout)
                     else:
                         doVerbose(lambda: Logger().log('Results: \t' + '\n\t'.join(matches)), verbose)
