@@ -21,6 +21,9 @@ GOOGLE_SEARCH_URL = "http://google.com/search?%s"
 # Regex used to find search results
 GOOGLE_SEARCH_REGEX = 'a href="[^\/]*\/\/(?!webcache).*?"'
 
+# Regex used to find recursable URLs
+RECURSION_SEARCH_REGEX = 'a href="[^<>]*?"'
+
 # A smart search is made by appending the following string to the search query
 SMART_FILE_SEARCH = " intitle:index of "
 
@@ -32,6 +35,12 @@ GOOGLE_USER_AGENT = 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, lik
 
 # Headers to report to pages
 GLOBAL_HEADERS = {'User-Agent': GOOGLE_USER_AGENT }
+
+# Max data size for an URL
+MAX_DATA_SIZE = 25*(2**20)
+
+# Pre-compiled regex for recursable URLs
+RECURSION_COMPILED_REGEX = re.compile(RECURSION_SEARCH_REGEX, re.IGNORECASE)
 
 ##    user_agent = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7'
 ## GOOGLE_SEARCH_REGEX = 'href="\/url\?q=[^\/]*\/\/(?!webcache).*?&amp'
@@ -225,12 +234,25 @@ def url_retrieve_with_headers(url, filename=None, headers=None, reporthook=None)
 # producing a fatal error if needed. In case there is a timeout or the data
 # is not available, print a message and return None
 #------------------------------------------------------------------------------
-def read_data_from_url(url, timeout, headers, verbose, indentation_level=0):
+def read_data_from_url(url, timeout, headers, verbose, indentation_level=0, max_data_size=MAX_DATA_SIZE):
+
+    def isValid(responseInfo):
+        if 'text' in str(responseInfo.get_all("Content-Type")[0]):
+            try:
+                datasize = int(responseInfo.get_all("Content-Length")[0])
+                return datasize <= max_data_size
+            except TypeError:
+                return True
+        else:
+            return False
 
     try:
         request = urllib.request.Request(url, None, headers)
         response = urllib.request.urlopen(request,timeout=timeout)
-        return str(response.read())
+        if isValid(response.info()):
+            return str(response.read())
+        else:
+            doVerbose(lambda: Logger().log('URL {:s} does not look like a web page'.format(url), True, 'RED', indentation_level=indentation_level),verbose)
     except KeyboardInterrupt:
         Logger().fatal_error('Interrupted. Exiting...', indentation_level=indentation_level)
     except HTTPError as e:
@@ -288,11 +310,10 @@ def build_regex(getfiles, tags, userRegex, types):
     return re.compile(regex_str),regex_str
 
 
-def findRecursableURLS(text):
-    #FIXME: Implement this
-    p = re.compile(GOOGLE_SEARCH_REGEX, re.IGNORECASE)
-
-    return list(set(x.replace('a href=', '').replace('a HREF=', '').replace('"', '').replace('A HREF=', '') for x in p.findall(text)))
+def findRecursableURLS(text,crawlurl):
+    prettyurls = list(set(x.replace('a href=', '').replace('a HREF=', '').replace('"', '').replace('A HREF=', '') for x in RECURSION_COMPILED_REGEX.findall(text)))
+    prettyurls = [urllib.parse.urljoin(crawlurl,url) for url in prettyurls]
+    return prettyurls
 
 def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, currentDepth=0, maxDepth=2, visitedUrls=[], prepend=''):
     # Stop if we have exceeded maxDepth
@@ -311,9 +332,8 @@ def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, tim
         doVerbose(lambda: Logger().log('{:s}Could not access {:s}.'.format(prepend,crawlurl), indentation_level=currentDepth), verbose)
         return []
 
-
     if currentDepth < maxDepth:
-        urls = [url for url in findRecursableURLS(data) if url not in visitedUrls]
+        urls = [url for url in findRecursableURLS(data,crawlurl) if url not in visitedUrls]
     else:
         if maxDepth != 0:
             doVerbose(lambda: Logger().log('{:s}Max depth reached, not listing URLs and not recursing.'.format(prepend), indentation_level=currentDepth), verbose)
@@ -492,6 +512,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             ##fixme a good test for forbidden
             #googleurls=['http://0audio.com/downloads/Game%20of%20Thrones%20S01%20Ep%2001-10/']
             ##FIXME            http://www.newgrounds.com/games spit out a 500 once
+            #googleurls = ['https://zahe.me/mirror/Game.of.Thrones.S04.720p.WEB-DL.x264.ShAaNiG/Game.of.Thrones.S04E01.720p.WEB-DL.450MB.ShAaNiG.com.mkv']
             doVerbose(lambda: Logger().log('Fetched {:d} results.'.format(len(googleurls))),verbose)
 
             # Find matches in results. if getfiles, then these are urls
@@ -573,8 +594,10 @@ def parse_input():
         parser.error('Options -a, -l, -n, -s and -t can only be used when crawling for files.')
     if options.getfiles and options.contentFile:
         parser.error('Options -o can only be used when crawling for content.')
+    if options.recursion_depth < 1:
+        parser.error('Recursion depth must be greater than 0')
 
-    # Adjust the offset (we expect it to start at 1)
+    # Adjust the offset (we expect it to start at 0)
     options.recursion_depth -= 1
 
     return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.directory, options.contentFile, options.verbose, options.timeout, options.recursion_depth
