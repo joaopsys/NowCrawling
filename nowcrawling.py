@@ -22,7 +22,7 @@ GOOGLE_SEARCH_URL = "http://google.com/search?%s"
 GOOGLE_SEARCH_REGEX = 'a href="[^\/]*\/\/(?!webcache).*?"'
 
 # Regex used to find recursable URLs
-RECURSION_SEARCH_REGEX = 'a href="[^<>]*?"'
+RECURSION_SEARCH_REGEX = 'href="[^<>]*?"'
 
 # A smart search is made by appending the following string to the search query
 SMART_FILE_SEARCH = " intitle:index of "
@@ -47,7 +47,7 @@ RECURSION_COMPILED_REGEX = re.compile(RECURSION_SEARCH_REGEX, re.IGNORECASE)
 
 # REGEX used to identify files. There are several placeholders which need to be replace()-ed. tagholder, typeholder,
 # and holdertag.
-FILE_REGEX = '(href=[^<>]*tagholder[^<>]*\.(?:typeholder))|((?:ftp|http|https):\/\/[^<>\n\t ]*holdertag[^<>\n\t ]*\.(?:typeholder))'
+FILE_REGEX = '((href|src)=[^<>]*tagholder[^<>]*\.(?:typeholder))|((?:ftp|http|https):\/\/[^<>\n\t ]*holdertag[^<>\n\t ]*\.(?:typeholder))'
 
 YES = ['yes', 'y', 'ye']
 
@@ -311,7 +311,7 @@ def build_regex(getfiles, tags, userRegex, types):
 
 
 def findRecursableURLS(text,crawlurl):
-    prettyurls = list(set(x.replace('a href=', '').replace('a HREF=', '').replace('"', '').replace('A HREF=', '') for x in RECURSION_COMPILED_REGEX.findall(text)))
+    prettyurls = list(set(x.replace('href=', '').replace('HREF=', '').replace('"', '') for x in RECURSION_COMPILED_REGEX.findall(text)))
     prettyurls = [urllib.parse.urljoin(crawlurl,url) for url in prettyurls]
     return prettyurls
 
@@ -368,11 +368,16 @@ def crawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, ind
 
     if getfiles:
         tuples = [j[i] for j in tuples for i in range(len(j)) if '.' in j[i]]
-        prettyurls = list(x.replace('href=', '').replace('HREF=', '').replace('"', '').replace('\'', '').replace('\\', '') for x in tuples)
+        for i,x in enumerate(tuples):
+            if x.lower().startswith('href='):
+                tuples[i] = x[5:]
+            elif x.lower().startswith('src='):
+                tuples[i] = x[4:]
+            tuples[i] = tuples[i].replace('"', '').replace('\'', '').replace('\\', '')
 
         # Resolve all URLs (might be relative, absolute, prepended with //, and others. urlib.parse.urljoin deals with
         # this for us)
-        prettyurls = [urllib.parse.urljoin(crawlurl,url) for url in prettyurls ]
+        prettyurls = [urllib.parse.urljoin(crawlurl,url) for url in tuples]
     else:
         ## RETURN EVERYTHING IF TUPLES
         if isinstance(tuples[0],tuple):
@@ -504,15 +509,6 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             # Fetch results
             doVerbose(lambda: Logger().log('Fetching {:d} results.'.format(GOOGLE_NUM_RESULTS)), verbose)
             googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
-            ##FIXME: It disgusts me to see all of this here
-            ##fixme a good test for content length
-            #googleurls=['http://www.vulture.com/2015/06/game-of-thrones-adaptation-debate.html']
-            ##fixme a good test for urls regex
-            #googleurls=['http://www.amazon.com/Tchaikovsky-Music-Index-Gerald-Abraham/dp/0781296269']
-            ##fixme a good test for forbidden
-            #googleurls=['http://0audio.com/downloads/Game%20of%20Thrones%20S01%20Ep%2001-10/']
-            ##FIXME            http://www.newgrounds.com/games spit out a 500 once
-            #googleurls = ['https://zahe.me/mirror/Game.of.Thrones.S04.720p.WEB-DL.x264.ShAaNiG/Game.of.Thrones.S04E01.720p.WEB-DL.450MB.ShAaNiG.com.mkv']
             doVerbose(lambda: Logger().log('Fetched {:d} results.'.format(len(googleurls))),verbose)
 
             # Find matches in results. if getfiles, then these are urls
