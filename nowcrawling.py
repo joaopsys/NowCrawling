@@ -22,7 +22,7 @@ GOOGLE_SEARCH_URL = "http://google.com/search?%s"
 GOOGLE_SEARCH_REGEX = 'a href="[^\/]*\/\/(?!webcache).*?"'
 
 # Regex used to find recursable URLs
-RECURSION_SEARCH_REGEX = 'href="[^<>]*?"'
+RECURSION_SEARCH_REGEX = """(href="[^<>]*?")|(href=.?'[^<>]*?')"""
 
 # A smart search is made by appending the following string to the search query
 SMART_FILE_SEARCH = " intitle:index of "
@@ -47,7 +47,7 @@ RECURSION_COMPILED_REGEX = re.compile(RECURSION_SEARCH_REGEX, re.IGNORECASE)
 
 # REGEX used to identify files. There are several placeholders which need to be replace()-ed. tagholder, typeholder,
 # and holdertag.
-FILE_REGEX = '((href|src)=[^<>]*tagholder[^<>]*\.(?:typeholder))|((?:ftp|http|https):\/\/[^<>\n\t ]*holdertag[^<>\n\t ]*\.(?:typeholder))'
+FILE_REGEX = '((?:href|src)=[^<>]*tagholder[^<>]*\.(?:typeholder))|((?:ftp|http|https):\/\/[^<>\n\t ]*holdertag[^<>\n\t ]*\.(?:typeholder))'
 
 YES = ['yes', 'y', 'ye']
 
@@ -96,7 +96,7 @@ class Logger:
         if log_time:
             prefix += '[{:s}] {:s}'.format(self.get_timestamp(), '...'*indentation_level)
 
-        if os.name == 'posix':
+        if os.name.lower() == 'posix':
             if is_bold:
                 prefix += self.shell_mod['BOLD']
             prefix += self.shell_mod[color.upper()]
@@ -104,7 +104,10 @@ class Logger:
             suffix = self.shell_mod['RESET']
 
         message = prefix + message + suffix
-        print ( message )
+        try:
+            print ( message )
+        except:
+            print ("Windows can't display this message.")
         sys.stdout.flush()
 
 
@@ -258,9 +261,15 @@ def read_data_from_url(url, timeout, headers, verbose, indentation_level=0, max_
     except HTTPError as e:
         doVerbose(lambda: Logger().log('URL {:s} not available or timed out ({:d})'.format(url, e.code), True, 'RED', indentation_level=indentation_level),verbose)
     except URLError as e:
-        doVerbose(lambda: Logger().log('URL {:s} not available or timed out (URL Error: {:s})'.format(url, str(e.reason)),True, 'RED', indentation_level=indentation_level), verbose)
+        if 'win' in os.name.lower():
+            doVerbose(lambda: Logger().log('URL {:s} not available or timed out (URL Error)'.format(url),True, 'RED', indentation_level=indentation_level), verbose)
+        else:
+            doVerbose(lambda: Logger().log('URL {:s} not available or timed out (URL Error: {:s})'.format(url, str(e.reason)),True, 'RED', indentation_level=indentation_level), verbose)
     except Exception as e:
-        doVerbose(lambda: Logger().log('URL {:s} not available or timed out ({:s})'.format(url, str(e)),True, 'RED', indentation_level=indentation_level), verbose)
+        if 'win' in os.name.lower():
+            doVerbose(lambda: Logger().log('URL {:s} not available or timed out'.format(url),True, 'RED', indentation_level=indentation_level), verbose)
+        else:
+            doVerbose(lambda: Logger().log('URL {:s} not available or timed out ({:s})'.format(url, str(e)),True, 'RED', indentation_level=indentation_level), verbose)
     return None
 
 #------------------------------------------------------------------------------
@@ -307,11 +316,12 @@ def build_regex(getfiles, tags, userRegex, types):
         else:
             regex_str = FILE_REGEX.replace('tagholder', userRegex).replace('typeholder', getTypesRe(types)).replace('holdertag', userRegex)
 
-    return re.compile(regex_str),regex_str
+    return re.compile(regex_str,re.IGNORECASE),regex_str
 
 
 def findRecursableURLS(text,crawlurl):
-    prettyurls = list(set(x.replace('href=', '').replace('HREF=', '').replace('"', '') for x in RECURSION_COMPILED_REGEX.findall(text)))
+    prettyurls = [''.join(x) for x in RECURSION_COMPILED_REGEX.findall(text)]
+    prettyurls = list(set(x.replace('href=', '').replace('HREF=', '').replace('"', '').replace('\'','').replace('\\','') for x in prettyurls))
     prettyurls = [urllib.parse.urljoin(crawlurl,url) for url in prettyurls]
     return prettyurls
 
@@ -483,9 +493,15 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
         except HTTPError as e:
             doVerbose(lambda: Logger().log('File {:s} from {:s} not available ({:d})'.format(file, searchurl, e.code), True, 'RED'),verbose)
         except URLError as e:
-            doVerbose(lambda: Logger().log('File {:s} from {:s} not available (URL Error: {:s})'.format(file, searchurl, str(e.reason)), True, 'RED'), verbose)
+            if 'win' in os.name.lower():
+                doVerbose(lambda: Logger().log('File {:s} from {:s} not available (URL Error)'.format(file, searchurl), True, 'RED'), verbose)
+            else:
+                doVerbose(lambda: Logger().log('File {:s} from {:s} not available (URL Error: {:s})'.format(file, searchurl, str(e.reason)), True, 'RED'), verbose)
         except Exception as e:
-            doVerbose(lambda: Logger().log('File {:s} from {:s} not available ({:s})'.format(file, searchurl, str(e)), True, 'RED'), verbose)
+            if 'win' in os.name.lower():
+                doVerbose(lambda: Logger().log('File {:s} from {:s} not available'.format(file, searchurl), True, 'RED'), verbose)
+            else:
+                doVerbose(lambda: Logger().log('File {:s} from {:s} not available ({:s})'.format(file, searchurl, str(e)), True, 'RED'), verbose)
 
     return downloaded
 
@@ -519,12 +535,13 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
                     doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
                 else:
                     # Got results
+                    matchnames = [match for match,url in matches]
                     if getfiles:
-                        doVerbose(lambda: Logger().log('Files: \t' + '\n\t'.join([i[0] for i in matches])), verbose)
+                        doVerbose(lambda: Logger().log('Files: \t' + '\n\t'.join(matchnames)), verbose)
                         downloaded += downloadFiles(downloaded, matches, ask, searchurl, maxfiles, limit,minsize, maxsize, directory,verbose,timeout)
                     else:
-                        doVerbose(lambda: Logger().log('Results: \t' + '\n\t'.join(matches)), verbose)
-                        logKeywordMatches(matches, contentFile)
+                        doVerbose(lambda: Logger().log('Results: \t' + '\n\t'.join(matchnames)), verbose)
+                        logKeywordMatches(matchnames, contentFile)
 
             # If google gave us less results than we asked for, then we've reached the end
             if len(googleurls) < GOOGLE_NUM_RESULTS:
