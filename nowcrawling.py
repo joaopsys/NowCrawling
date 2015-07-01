@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import contextlib
+import datetime
 import os
 import time
 import sys
@@ -8,6 +9,7 @@ import urllib.request
 import urllib.parse
 from optparse import OptionParser, OptionGroup
 import re
+from timeit import default_timer as timer
 
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
@@ -119,6 +121,36 @@ class Logger:
         exit()
 
 #------------------------------------------------------------------------------
+# A function decorator to assign static values to functions, such as those
+# found in the C-language. Example:
+# @static_vars(a1=1, a2=2)
+# def test(file, directory, filename):
+#  ... now you can use test.a1 and test.a2 freely, and their value is kept between function invocations
+#------------------------------------------------------------------------------
+def static_vars(**kwargs):
+    def decorate(func):
+        for k in kwargs:
+            setattr(func, k, kwargs[k])
+        return func
+    return decorate
+
+#------------------------------------------------------------------------------
+# Set of functions used for printing human readable sizes (converting them from
+# bytes to KB/MB/GB/etc).
+#------------------------------------------------------------------------------
+
+# Adapted from  http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
+def sizeof_fmt(num, suffix='B'):
+    for unit in ['','K','M','G','T','P','E','Z']:
+        if abs(num) < 1024.0:
+            return "%3.1f%s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f%s%s" % (num, 'Y', suffix)
+
+def humanReadableSize(filesize):
+    return sizeof_fmt(filesize)
+
+#------------------------------------------------------------------------------
 # Set of functions used for a progress bar
 #------------------------------------------------------------------------------
 
@@ -149,29 +181,17 @@ def getTerminalWidth():
     return int(cr[1])
 
 # Invoke continuously. When finished, remember to emit a newline.
-def progress_bar(progress, prefix='Progress'):
+def download_progress_bar(progress, speedPerSec = None, prefix='Progress'):
     progress = max(min(progress, 1), 0)
-    MAX_CARDINALS = getTerminalWidth()-len('{:s}: [] 100%'.format(prefix))
+    if speedPerSec:
+        speed_text = '{:s}/s '.format(humanReadableSize(speedPerSec))
+    else:
+        speed_text = '---B/s'
+    MAX_CARDINALS = getTerminalWidth()-len('{:s}: [] 100% '.format(prefix)) - len(speed_text)
     num_cardinals = round(progress*MAX_CARDINALS)
     num_whites = MAX_CARDINALS - num_cardinals
-    sys.stdout.write('\r{0}: [{1}{2}] {3}%'.format(prefix, '#'*num_cardinals,' '*num_whites, round(progress*100)))
+    sys.stdout.write('\r{0}: [{1}{2}] {3}% {4}'.format(prefix, '#'*num_cardinals,' '*num_whites, round(progress*100), speed_text))
     sys.stdout.flush()
-
-#------------------------------------------------------------------------------
-# Set of functions used for printing human readable sizes (converting them from
-# bytes to KB/MB/GB/etc).
-#------------------------------------------------------------------------------
-
-# Adapted from  http://stackoverflow.com/questions/1094841/reusable-library-to-get-human-readable-version-of-file-size
-def sizeof_fmt(num, suffix='B'):
-    for unit in ['','K','M','G','T','P','E','Z']:
-        if abs(num) < 1024.0:
-            return "%3.1f%s%s" % (num, unit, suffix)
-        num /= 1024.0
-    return "%.1f%s%s" % (num, 'Y', suffix)
-
-def humanReadableSize(filesize):
-    return sizeof_fmt(filesize)
 
 
 #------------------------------------------------------------------------------
@@ -414,12 +434,32 @@ def getMinMaxSizeFromLimit(limit):
     else:
         return 0, MAX_FILE_SIZE
 
+
 def downloadFile(file, directory, filename):
+    DOWNLOAD_FILE_WINDOW_SIZE = 5
+    DOWNLOAD_FILE_SAMPLING_SECONDS = 0.5
+
+    @static_vars(last_time=timer(), speeds=[], accumulator=0)
     def reporthook(blocknum, bs, size):
+        now = timer()
         if (size < 0):
-            progress_bar(1)
+            download_progress_bar(1)
         else:
-            progress_bar(min(size,blocknum*bs/size))
+            reporthook.accumulator += bs
+            diff = now - reporthook.last_time
+            if diff >= DOWNLOAD_FILE_SAMPLING_SECONDS:
+                downloadFile.last_time = now
+                speed = reporthook.accumulator / diff
+                downloadFile.accumulator = 0
+                if len(reporthook.speeds) > DOWNLOAD_FILE_WINDOW_SIZE:
+                    reporthook.speeds = reporthook.speeds[1:DOWNLOAD_FILE_WINDOW_SIZE-1] + [speed]
+                else:
+                    reporthook.speeds += [speed]
+
+            if reporthook.speeds:
+                download_progress_bar(min(size,blocknum*bs/size), sum(reporthook.speeds)/len(reporthook.speeds) )
+            else:
+                download_progress_bar(min(size, blocknum * bs / size))
 
     # Ensure directory exists
     try:
@@ -434,7 +474,6 @@ def downloadFile(file, directory, filename):
         ## FIXME Leave the half-file there? For now let's not be intrusive
         print()
         Logger().log('Download of file {:s} interrupted. Continuing...'.format(file),color='YELLOW')
-        return
 
 # Get the filesize of a given URL with the given timeout and headers
 def get_filesize(url, timeout, headers):
