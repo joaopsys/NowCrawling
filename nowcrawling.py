@@ -124,7 +124,7 @@ class Logger:
 # A function decorator to assign static values to functions, such as those
 # found in the C-language. Example:
 # @static_vars(a1=1, a2=2)
-# def test(file, directory, filename):
+# def test():
 #  ... now you can use test.a1 and test.a2 freely, and their value is kept between function invocations
 #------------------------------------------------------------------------------
 def static_vars(**kwargs):
@@ -451,8 +451,8 @@ def downloadFile(file, directory, filename):
                 downloadFile.last_time = now
                 speed = reporthook.accumulator / diff
                 downloadFile.accumulator = 0
-                if len(reporthook.speeds) > DOWNLOAD_FILE_WINDOW_SIZE:
-                    reporthook.speeds = reporthook.speeds[1:DOWNLOAD_FILE_WINDOW_SIZE-1] + [speed]
+                if len(reporthook.speeds) == DOWNLOAD_FILE_WINDOW_SIZE:
+                    reporthook.speeds = reporthook.speeds[1:] + [speed]
                 else:
                     reporthook.speeds += [speed]
 
