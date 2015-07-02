@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import contextlib
-import datetime
 import os
 import time
 import sys
@@ -125,7 +124,8 @@ class Logger:
 # found in the C-language. Example:
 # @static_vars(a1=1, a2=2)
 # def test():
-#  ... now you can use test.a1 and test.a2 freely, and their value is kept between function invocations
+#  ... now you can use test.a1 and test.a2 freely, and their value is kept
+# between function invocations
 #------------------------------------------------------------------------------
 def static_vars(**kwargs):
     def decorate(func):
@@ -314,6 +314,10 @@ def crawlGoogle(numres, start, query, doSmartSearch):
     ##return list(set(x.replace('href="/url?q=', '').replace('HREF="/url?q=', '').replace('"', '').replace('&amp', '') for x in p.findall(data)))
     return list(set(x.replace('a href=', '').replace('a HREF=', '').replace('"', '').replace('A HREF=', '') for x in p.findall(data)))
 
+#------------------------------------------------------------------------------
+# Regex parsing and building
+#------------------------------------------------------------------------------
+
 def getTagsRe(tags, flag):
     tagslist = tags.split()
     if flag == 1:
@@ -338,6 +342,9 @@ def build_regex(getfiles, tags, userRegex, types):
 
     return re.compile(regex_str,re.IGNORECASE),regex_str
 
+#------------------------------------------------------------------------------
+# Webpage crawling
+#------------------------------------------------------------------------------
 
 def findRecursableURLS(text,crawlurl):
     prettyurls = [''.join(x) for x in RECURSION_COMPILED_REGEX.findall(text)]
@@ -419,21 +426,9 @@ def crawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, ind
     doVerbose(lambda: Logger().log('Done looking for matches in {:s}...Found {:d} matches.'.format(crawlurl, len(matches)), indentation_level=indentationLevel), verbose)
     return [[i,crawlurl] for i in matches]
 
-def getMinMaxSizeFromLimit(limit):
-    if limit:
-        minsize, maxsize = limit.split('-')
-        if not minsize:
-            minsize = '0'
-        if not maxsize:
-            maxsize = str(MAX_FILE_SIZE)
-
-        if maxsize and minsize and int(maxsize) < int(minsize):
-            Logger().log("You are dumb, but it's fine, I will swap limits", color='RED')
-            return int(maxsize), int(minsize)
-        return int(minsize), int(maxsize)
-    else:
-        return 0, MAX_FILE_SIZE
-
+#------------------------------------------------------------------------------
+# File downloading
+#------------------------------------------------------------------------------
 
 def downloadFile(file, directory, filename):
     DOWNLOAD_FILE_WINDOW_SIZE = 5
@@ -543,6 +538,26 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
                 doVerbose(lambda: Logger().log('File {:s} from {:s} not available ({:s})'.format(file, searchurl, str(e)), True, 'RED'), verbose)
 
     return downloaded
+
+#------------------------------------------------------------------------------
+# Main Crawler code
+#------------------------------------------------------------------------------
+
+def getMinMaxSizeFromLimit(limit):
+    if limit:
+        minsize, maxsize = limit.split('-')
+        if not minsize:
+            minsize = '0'
+        if not maxsize:
+            maxsize = str(MAX_FILE_SIZE)
+
+        if maxsize and minsize and int(maxsize) < int(minsize):
+            Logger().log("You are dumb, but it's fine, I will swap limits", color='RED')
+            return int(maxsize), int(minsize)
+        return int(minsize), int(maxsize)
+    else:
+        return 0, MAX_FILE_SIZE
+
 
 # When in content mode, use this to log all the matches. Possibly logging to an output file.
 def logKeywordMatches(matches, contentFile):
