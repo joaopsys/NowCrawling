@@ -135,7 +135,7 @@ def static_vars(**kwargs):
     return decorate
 
 #------------------------------------------------------------------------------
-# Returna a regex as a printable string. FIXME: it's currently a very raw
+# Return a regex as a printable string. FIXME: it's currently a very raw
 # prototype.
 #------------------------------------------------------------------------------
 def regex_as_string(url):
@@ -261,34 +261,51 @@ def url_retrieve_with_headers(url, filename=None, headers=None, reporthook=None)
 
 #------------------------------------------------------------------------------
 # Given a list in the form of (regex, compiled_regex) pairs, check if
-# there is any match and return that match or False in case there wasn't
+# there is any match in str and return that match or False in case there wasn't
 #------------------------------------------------------------------------------
-def match_regex_list(url, regex_list):
-    host = urllib.parse.urlsplit(url).netloc
+def match_regex_list(s, regex_list):
     if regex_list:
         for regex,p in regex_list:
-            if p.match(host):
+            if p.match(s):
                 return regex
     return False
 
 #------------------------------------------------------------------------------
 # Given a blacklist in the form of (regex, compiled_regex) pairs, check if
-# there is any match and return that match or False in case there wasn't
+# there is any match in a URL's domain and return that match or False in case
+# there wasn't
 #------------------------------------------------------------------------------
 def is_blacklisted(url, blacklist):
-    return match_regex_list(url, blacklist)
+    host = urllib.parse.urlsplit(url).netloc
+    return match_regex_list(host, blacklist)
+
+#------------------------------------------------------------------------------
+# Given a whitelist in the form of (regex, compiled_regex) pairs, check if
+# there is any match in a URL's domain and return that match or False in case
+# there wasn't
+#------------------------------------------------------------------------------
+def is_whitelisted(url, whitelist):
+    if not whitelist:
+        return True
+    host = urllib.parse.urlsplit(url).netloc
+    return match_regex_list(host, whitelist)
 
 #------------------------------------------------------------------------------
 # Read a full webpage from a URL and return it as a string. Catch CTRL+C events
 # producing a fatal error if needed. In case there is a timeout or the data
 # is not available, print a message and return None
 #------------------------------------------------------------------------------
-def read_data_from_url(url, timeout, headers, verbose, indentation_level=0, max_data_size=MAX_DATA_SIZE, blacklist=None):
+def read_data_from_url(url, timeout, headers, verbose, indentation_level=0, max_data_size=MAX_DATA_SIZE, blacklist=None, whitelist=None):
 
     blacklist_regex = is_blacklisted(url, blacklist)
     if blacklist_regex:
         doVerbose(lambda: Logger().log("URL {:s} skipped because it's blacklisted ({:s})".format(url, regex_as_string(blacklist_regex)), False, 'YELLOW',indentation_level=indentation_level), verbose)
         return None
+
+    if not is_whitelisted(url, whitelist):
+        doVerbose(lambda: Logger().log("URL {:s} skipped because it's not whitelisted".format(url), False, 'YELLOW', indentation_level=indentation_level), verbose)
+        return None
+
     def isValid(responseInfo):
         if 'text' in str(responseInfo.get_all("Content-Type")[0]):
             try:
@@ -382,7 +399,7 @@ def findRecursableURLS(text,crawlurl):
     prettyurls = [urllib.parse.urljoin(crawlurl,url) for url in prettyurls]
     return prettyurls
 
-def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, blacklist, currentDepth=0, maxDepth=2, visitedUrls=[], prepend=''):
+def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, blacklist, whitelist, currentDepth=0, maxDepth=2, visitedUrls=[], prepend=''):
     # Stop if we have exceeded maxDepth
     if currentDepth > maxDepth:
         return []
@@ -394,7 +411,7 @@ def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, tim
 
     visitedUrls += [crawlurl]
 
-    data = read_data_from_url(crawlurl, timeout, GLOBAL_HEADERS, verbose, currentDepth, blacklist=blacklist)
+    data = read_data_from_url(crawlurl, timeout, GLOBAL_HEADERS, verbose, currentDepth, blacklist=blacklist, whitelist=whitelist)
     if not data:
         #doVerbose(lambda: Logger().log('{:s}Could not access {:s}.'.format(prepend,crawlurl), indentation_level=currentDepth), verbose)
         return []
@@ -405,7 +422,7 @@ def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, tim
         if maxDepth != 0:
             doVerbose(lambda: Logger().log('{:s}Max depth reached, not listing URLs and not recursing.'.format(prepend), indentation_level=currentDepth), verbose)
 
-    matches = crawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, blacklist, currentDepth+1, data)
+    matches = crawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, blacklist, whitelist, currentDepth+1, data)
 
     if currentDepth < maxDepth:
         if not urls:
@@ -415,14 +432,14 @@ def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, tim
             doVerbose(lambda: Logger().log('{:s}Recursable non-visited URLs found in {:s}: '.format(prepend,crawlurl) + ', '.join(urls), indentation_level=currentDepth), verbose)
             for url_number,url in enumerate(urls):
                 recurse_prepend = prepend[:-2] + ', {:d}/{:d}] '.format(url_number+1, len(urls))
-                matches += recursiveCrawlURLForMatches(url, getfiles, compiled_regex, verbose, timeout, blacklist, currentDepth+1, maxDepth, visitedUrls, recurse_prepend)
+                matches += recursiveCrawlURLForMatches(url, getfiles, compiled_regex, verbose, timeout, blacklist, whitelist, currentDepth+1, maxDepth, visitedUrls, recurse_prepend)
     return matches
 
 # This is Jota's crazy magic trick
-def crawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, blacklist, indentationLevel, data=None):
+def crawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, blacklist, whitelist, indentationLevel, data=None):
     doVerbose(lambda: Logger().log('Looking for matches in {:s} ...'.format(crawlurl), indentation_level=indentationLevel), verbose)
     if not data:
-        data = read_data_from_url(crawlurl, timeout, GLOBAL_HEADERS, verbose, indentationLevel, blacklist=blacklist)
+        data = read_data_from_url(crawlurl, timeout, GLOBAL_HEADERS, verbose, indentationLevel, blacklist=blacklist, whitelist=whitelist)
     if not data:
         return []
 
@@ -588,8 +605,8 @@ def getMinMaxSizeFromLimit(limit):
     else:
         return 0, MAX_FILE_SIZE
 
-def build_blacklist_from_file(blacklist_file):
-    with open(blacklist_file) as f:
+def build_regex_list_from_file(file_path):
+    with open(file_path) as f:
         lines = [line.strip() for line in f.readlines() if not line.strip().startswith('#')]
         return [ (regex, re.compile('^'+regex+'$', re.IGNORECASE)) for regex in lines]
 
@@ -601,12 +618,13 @@ def logKeywordMatches(matches, contentFile):
             with open(contentFile, 'a') as f:
                 f.write(match + "\n")
 
-def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, directory, contentFile, verbose, timeout, recursion_depth, blacklist_file):
+def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, directory, contentFile, verbose, timeout, recursion_depth, blacklist_file, whitelist_file):
     downloaded = 0
     start = 0
     minsize, maxsize = getMinMaxSizeFromLimit(limit)
     compiled_regex,regex_str = build_regex(getfiles, tags, regex, extensions)
-    blacklist = build_blacklist_from_file(blacklist_file) if blacklist_file else []
+    blacklist = build_regex_list_from_file(blacklist_file) if blacklist_file else []
+    whitelist = build_regex_list_from_file(whitelist_file) if whitelist_file else []
 
     doVerbose(lambda: Logger().log('Search regex: ->\'{:s}\'<-.'.format(regex_as_string(regex_str))), verbose)
     try:
@@ -618,7 +636,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
 
             # Find matches in results. if getfiles, then these are urls
             for url_number,searchurl in enumerate(googleurls):
-                matches = recursiveCrawlURLForMatches(searchurl, getfiles, compiled_regex, verbose, timeout, blacklist, maxDepth=recursion_depth ,visitedUrls=ALL_VISITED_URLS, prepend='[{:d}/{:d}] '.format(url_number+1, len(googleurls)))
+                matches = recursiveCrawlURLForMatches(searchurl, getfiles, compiled_regex, verbose, timeout, blacklist, whitelist, maxDepth=recursion_depth ,visitedUrls=ALL_VISITED_URLS, prepend='[{:d}/{:d}] '.format(url_number+1, len(googleurls)))
                 urllib.request.urlcleanup()
                 if not matches:
                     doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
@@ -655,7 +673,8 @@ def parse_input():
     parser.add_option('-i', '--ignore-after', help='Time (in seconds) for an URL to be considered down (Default: 7)', dest='timeout', type='int', default=DEFAULT_URL_TIMEOUT)
     parser.add_option('-z', '--recursion-depth', help='Recursion depth (starts at 1, which means no recursion). Default: 1', dest='recursion_depth', type='int', default=1)
     parser.add_option('-v', '--verbose', help='Display all error/warning/info messages', action="store_true", dest="verbose",default=False)
-    parser.add_option('-b', '--blacklist', help="Provide a blacklist file for DOMAINS. One regex per line (use '#' for comments). e.g., to match all .com domains: '.*\.com'.", type="string", dest="blacklist_file",default=None)
+    parser.add_option('-b', '--blacklist', help="Provide a BLACKLIST file for DOMAINS. One regex per line (use '#' for comments). e.g., to match all .com domains: '.*\.com'.", type="string", dest="blacklist_file",default=None)
+    parser.add_option('-w', '--whitelist', help="Provide a WHITELIST file for DOMAINS. One regex per line (use '#' for comments). e.g., to match all .com domains: '.*\.com'.", type="string", dest="whitelist_file", default=None)
 
     filesgroup = OptionGroup(parser, "Files (-f) Crawler Arguments")
     filesgroup.add_option('-a', '--ask', help='Ask before downloading', action="store_true", dest="ask", default=False)
@@ -699,11 +718,13 @@ def parse_input():
         parser.error('Options -o can only be used when crawling for content.')
     if options.recursion_depth < 1:
         parser.error('Recursion depth must be greater than 0')
+    if options.blacklist_file and options.whitelist_file:
+        parser.error('Cannot use blacklist and whitelist at the same time. Use either blacklist (-b), whitelist (-w) or none (default).')
 
     # Adjust the offset (we expect it to start at 0)
     options.recursion_depth -= 1
 
-    return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.directory, options.contentFile, options.verbose, options.timeout, options.recursion_depth, options.blacklist_file
+    return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.directory, options.contentFile, options.verbose, options.timeout, options.recursion_depth, options.blacklist_file, options.whitelist_file
 
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
