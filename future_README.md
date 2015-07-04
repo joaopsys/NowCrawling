@@ -19,8 +19,11 @@ Let's imagine you want to find the first episode of the first season of Game of 
 nowcrawling -f -k "game of thrones" -t "s01e01" -e "mkv mp4 avi" -s
 
 -k "game of thrones" -> This is the main search term that will be used. NowCrawling will insert this term into Google Search and start crawling from there.
+
 -t "s01e01" -> This is a string representing what you want to find in the file name. Usually seasons and episodes are always identified in the episode file name.
+
 -e "mkv mp4 avi" -> If you're crawling for video files, it's a good idea to specify the extensions you want!
+
 -s -> S stands for Smart Search. By using advanced google search terms, NowCrawling will highly reduce the time it takes to find your file. We recommend you to remove this parameter if you're crawling for multiple files, as it will probably also reduce your crawling results. Since we only want one file in this case, it's perfectly fine to use it.
 
 That's it! NowCrawling will start hunting for ALL the first episodes of the first season of Game of Thrones it finds, and we mean ALL of them because surely there are thousands of replicas around the internet. We might want to limit even more our crawling results...
@@ -44,7 +47,9 @@ Let's imagine you want to find a bunch of GMail e-mails:
 nowcrawling -c -k "gmail leak" -m "[a-zA-Z0-9]*?@gmail.com" -o output.txt
 
 -k "gmail leak" -> As we've seen before, this is the main search term of the crawler.
+
 -m "[a-zA-Z0-9]*?@gmail.com" -> The matching regex of the content you want. In this case, this regex represents a Gmail e-mail address.
+
 -o output.txt -> The output file of our results. In the end it will contain all the e-mail addresses it could find.
 
 You can find many more useful options by using the -h argument (for example -z for recursion depth, which will greatly expand your crawling range)
