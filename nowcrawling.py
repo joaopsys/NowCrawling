@@ -650,8 +650,8 @@ def logKeywordMatches(matches, contentFile):
                 f.write(match + "\n")
 
 # Fetch URLs to crawl from Google or directly from the user supplied list
-def fetch_urls(url_list, keywords, start, smart, verbose):
-    if url_list:
+def fetch_urls(url_list, keywords, start, smart, url_list_supplied, verbose):
+    if url_list_supplied:
         doVerbose(lambda: Logger().log('Using URL list:'), verbose)
         for url in url_list:
             doVerbose(lambda: Logger().log('\t{:s}'.format(url)), verbose)
@@ -669,13 +669,13 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
     compiled_regex,regex_str = build_regex(getfiles, tags, regex, extensions)
     blacklist = build_regex_list_from_file(blacklist_file) if blacklist_file else []
     whitelist = build_regex_list_from_file(whitelist_file) if whitelist_file else []
-    url_list_supplied = (url_list == None)
+    url_list_supplied = (url_list != None)
 
     doVerbose(lambda: Logger().log('Search regex: ->\'{:s}\'<-.'.format(regex_as_string(regex_str))), verbose)
     try:
         while True:
             # Fetch results from google or use user-supplied url list
-            url_list = fetch_urls(url_list, keywords, start, smart, verbose)
+            url_list = fetch_urls(url_list, keywords, start, smart, url_list_supplied, verbose)
 
             # Find matches in results. if getfiles, then these are urls
             for url_number,searchurl in enumerate(url_list):
