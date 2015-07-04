@@ -1,4 +1,35 @@
 #!/usr/bin/env python3
+##
+## Copyright (C) 2015 João Ricardo Lourenço <jorl17.8@gmail.com>, João Soares <joaosoares11@hotmail.com>
+##
+## Github: https://github.com/Jorl17, https://github.com/xJota/
+##
+## Project main repository: https://github.com/xJota/NowCrawling
+##
+## This file is part of NowCrawling.
+##
+## NowCrawling is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 2 of the License, or
+## (at your option) any later version.
+##
+## NowCrawling is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with NowCrawling.  If not, see <http://www.gnu.org/licenses/>.
+##
+
+## Order is alphabetical. Jota is the king of regexes!
+__author__ = "João Ricardo Lourenço, João Soares"
+__copyright__ = "Copyright 2015, João Ricardo Lourenço, João Soares"
+__credits__ = ["João Ricardo Lourenço", "João Soares"]
+__license__ = "GPLv2"
+__email__ = ["jorl17.8@gmail.com", "joaosoares11@hotmail.com"]
+__version__ = "0.9.0"
+
 import contextlib
 import os
 import time
@@ -685,7 +716,7 @@ def get_url_list(file_path):
 
 
 def parse_input():
-    parser = OptionParser()
+    parser = OptionParser(description='NowCrawling version {:s} by {:s}.'.format(__version__, ' & '.join(__credits__)))
     parser.add_option('-f', '--files', help='Crawl for files', action="store_true", dest="getfiles")
     parser.add_option('-c', '--content', help='Crawl for content (words, strings, pages, regexes)', action="store_false", dest="getfiles")
     parser.add_option('-k', '--keywords', help='(Required) A quoted list of words separated by spaces which will be the search terms of the crawler', dest='keywords', type='string')
