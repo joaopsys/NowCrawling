@@ -1,4 +1,35 @@
 #!/usr/bin/env python3
+##
+## Copyright (C) 2015 João Ricardo Lourenço <jorl17.8@gmail.com>, João Soares <joaosoares11@hotmail.com>
+##
+## Github: https://github.com/Jorl17, https://github.com/xJota/
+##
+## Project main repository: https://github.com/xJota/NowCrawling
+##
+## This file is part of NowCrawling.
+##
+## NowCrawling is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 2 of the License, or
+## (at your option) any later version.
+##
+## NowCrawling is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+##
+## You should have received a copy of the GNU General Public License
+## along with NowCrawling.  If not, see <http://www.gnu.org/licenses/>.
+##
+
+## Order is alphabetical. Jota is the king of regexes!
+__author__ = "João Ricardo Lourenço, João Soares"
+__copyright__ = "Copyright 2015, João Ricardo Lourenço, João Soares"
+__credits__ = ["João Ricardo Lourenço", "João Soares"]
+__license__ = "GPLv2"
+__email__ = ["jorl17.8@gmail.com", "joaosoares11@hotmail.com"]
+__version__ = "0.9.0"
+
 import contextlib
 import os
 import time
@@ -618,25 +649,37 @@ def logKeywordMatches(matches, contentFile):
             with open(contentFile, 'a') as f:
                 f.write(match + "\n")
 
-def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, directory, contentFile, verbose, timeout, recursion_depth, blacklist_file, whitelist_file):
+# Fetch URLs to crawl from Google or directly from the user supplied list
+def fetch_urls(url_list, keywords, start, smart, url_list_supplied, verbose):
+    if url_list_supplied:
+        doVerbose(lambda: Logger().log('Using URL list:'), verbose)
+        for url in url_list:
+            doVerbose(lambda: Logger().log('\t{:s}'.format(url)), verbose)
+    else:
+        doVerbose(lambda: Logger().log('Fetching {:d} results from Google.'.format(GOOGLE_NUM_RESULTS)), verbose)
+        url_list = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
+        doVerbose(lambda: Logger().log('Fetched {:d} results.'.format(len(url_list))), verbose)
+
+    return url_list
+
+def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, directory, contentFile, verbose, timeout, recursion_depth, blacklist_file, whitelist_file, url_list):
     downloaded = 0
     start = 0
     minsize, maxsize = getMinMaxSizeFromLimit(limit)
     compiled_regex,regex_str = build_regex(getfiles, tags, regex, extensions)
     blacklist = build_regex_list_from_file(blacklist_file) if blacklist_file else []
     whitelist = build_regex_list_from_file(whitelist_file) if whitelist_file else []
+    url_list_supplied = (url_list != None)
 
     doVerbose(lambda: Logger().log('Search regex: ->\'{:s}\'<-.'.format(regex_as_string(regex_str))), verbose)
     try:
         while True:
-            # Fetch results
-            doVerbose(lambda: Logger().log('Fetching {:d} results.'.format(GOOGLE_NUM_RESULTS)), verbose)
-            googleurls = crawlGoogle(GOOGLE_NUM_RESULTS, start, keywords, smart)
-            doVerbose(lambda: Logger().log('Fetched {:d} results.'.format(len(googleurls))),verbose)
+            # Fetch results from google or use user-supplied url list
+            url_list = fetch_urls(url_list, keywords, start, smart, url_list_supplied, verbose)
 
             # Find matches in results. if getfiles, then these are urls
-            for url_number,searchurl in enumerate(googleurls):
-                matches = recursiveCrawlURLForMatches(searchurl, getfiles, compiled_regex, verbose, timeout, blacklist, whitelist, maxDepth=recursion_depth ,visitedUrls=ALL_VISITED_URLS, prepend='[{:d}/{:d}] '.format(url_number+1, len(googleurls)))
+            for url_number,searchurl in enumerate(url_list):
+                matches = recursiveCrawlURLForMatches(searchurl, getfiles, compiled_regex, verbose, timeout, blacklist, whitelist, maxDepth=recursion_depth ,visitedUrls=ALL_VISITED_URLS, prepend='[{:d}/{:d}] '.format(url_number+1, len(url_list)))
                 urllib.request.urlcleanup()
                 if not matches:
                     doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
@@ -650,12 +693,14 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
                         doVerbose(lambda: Logger().log('Results: \t' + '\n\t'.join(matchnames)), verbose)
                         logKeywordMatches(matchnames, contentFile)
 
-            # If google gave us less results than we asked for, then we've reached the end
-            if len(googleurls) < GOOGLE_NUM_RESULTS:
+            # Stop if:
+            # a) We were given a URL list and so, we're done
+            # b) We were searching Google, but they gave us less results than we asked for, thus we've reached the end
+            if url_list_supplied or len(url_list) < GOOGLE_NUM_RESULTS:
                 Logger().log('No more results. Exiting.', True, 'GREEN')
                 break
 
-            start+=len(googleurls)
+            start+=len(url_list)
     except KeyboardInterrupt:
         Logger().fatal_error('Interrupted. Exiting...')
 
@@ -665,8 +710,13 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
 
+def get_url_list(file_path):
+    with open(file_path) as f:
+        return [url.strip() for url in f.readlines() if not url.startswith('#')]
+
+
 def parse_input():
-    parser = OptionParser()
+    parser = OptionParser(description='NowCrawling version {:s} by {:s}.'.format(__version__, ' & '.join(__credits__)))
     parser.add_option('-f', '--files', help='Crawl for files', action="store_true", dest="getfiles")
     parser.add_option('-c', '--content', help='Crawl for content (words, strings, pages, regexes)', action="store_false", dest="getfiles")
     parser.add_option('-k', '--keywords', help='(Required) A quoted list of words separated by spaces which will be the search terms of the crawler', dest='keywords', type='string')
@@ -675,6 +725,7 @@ def parse_input():
     parser.add_option('-v', '--verbose', help='Display all error/warning/info messages', action="store_true", dest="verbose",default=False)
     parser.add_option('-b', '--blacklist', help="Provide a BLACKLIST file for DOMAINS. One regex per line (use '#' for comments). e.g., to match all .com domains: '.*\.com'.", type="string", dest="blacklist_file",default=None)
     parser.add_option('-w', '--whitelist', help="Provide a WHITELIST file for DOMAINS. One regex per line (use '#' for comments). e.g., to match all .com domains: '.*\.com'.", type="string", dest="whitelist_file", default=None)
+    parser.add_option('-u', '--url-list', help='Provide a list of URLs to use for crawling, instead of performing a google search. The list can be supplied in two ways: 1) a simple comma-separated list of URLs which begins with the keyword "list:" (e.g. -u "list:http://a.com,http://b.com") or 2) the path to a file which contains one URL per line, prefixed by the keyword "file:" (e.g. -u "file:a_file.txt"). In this file, use \'#\' for comments.',type="string", dest="url_list", default=None)
 
     filesgroup = OptionGroup(parser, "Files (-f) Crawler Arguments")
     filesgroup.add_option('-a', '--ask', help='Ask before downloading', action="store_true", dest="ask", default=False)
@@ -702,8 +753,8 @@ def parse_input():
 
     if options.getfiles is None:
         parser.error('You must specify the crawler type: -f for files or -c for content')
-    if options.getfiles and not options.keywords:
-        parser.error('You must specify keywords (-k) when crawling for files.')
+    if options.getfiles and not options.keywords and not options.url_list:
+        parser.error('You must either specify keywords (-k) or a URL list (-u) when crawling for files.')
     if not options.getfiles and not options.keywords:
         parser.error('You must specify keywords when crawling for content.')
     if options.getfiles and options.tags and options.regex:
@@ -720,11 +771,20 @@ def parse_input():
         parser.error('Recursion depth must be greater than 0')
     if options.blacklist_file and options.whitelist_file:
         parser.error('Cannot use blacklist and whitelist at the same time. Use either blacklist (-b), whitelist (-w) or none (default).')
+    if options.url_list and (options.keywords or options.smart):
+        parser.error("Cannot use URL list (-u) with keyword (-k) and/or smart search (-s). What's the point of supplying keywords for a google search if we're not searching google?")
 
+    if options.url_list:
+        if options.url_list.lower().startswith('list:'):
+            options.url_list = [url.strip() for url in options.url_list[5:].split(',')]
+        elif options.url_list.lower().startswith('file:'):
+            options.url_list = get_url_list(options.url_list[5:].strip())
+        else:
+            parser.error('A URL list (-u) must be prefixed with the "list:" or the "file:" keyword to indicate a comma-separated list of URLs or a file with one URL per line.')
     # Adjust the offset (we expect it to start at 0)
     options.recursion_depth -= 1
 
-    return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.directory, options.contentFile, options.verbose, options.timeout, options.recursion_depth, options.blacklist_file, options.whitelist_file
+    return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.directory, options.contentFile, options.verbose, options.timeout, options.recursion_depth, options.blacklist_file, options.whitelist_file, options.url_list
 
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
