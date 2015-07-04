@@ -24,7 +24,7 @@ nowcrawling -f -k "game of thrones" -t "s01e01" -e "mkv mp4 avi" -s
 
 -e "mkv mp4 avi" -> If you're crawling for video files, it's a good idea to specify the extensions you want!
 
--s -> S stands for Smart Search. By using advanced google search terms, NowCrawling will highly reduce the time it takes to find your file. We recommend you to remove this parameter if you're crawling for multiple files, as it will probably also reduce your crawling results. Since we only want one file in this case, it's perfectly fine to use it.
+-s -> S stands for Smart Search. By using advanced google search terms, NowCrawling will highly reduce the time it takes to find your file. We recommend you to remove this parameter if you're crawling for multiple files, as it will probably also reduce your crawling results. Since we only want one file in this case, it's perfectly fine to use it. WARNING: DO NOT OVERUSE THIS ARGUMENT - Google will ban you temporarily if you do.
 
 That's it! NowCrawling will start hunting for ALL the first episodes of the first season of Game of Thrones it finds, and we mean ALL of them because surely there are thousands of replicas around the internet. We might want to limit even more our crawling results...
 
