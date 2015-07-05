@@ -189,6 +189,18 @@ def humanReadableSize(filesize):
     return sizeof_fmt(filesize)
 
 #------------------------------------------------------------------------------
+# A function to convert from a human-readable size to any number of bytes.
+#------------------------------------------------------------------------------
+def humanReadableSizeToBytes(filesize):
+    filesize = filesize.upper()
+    units = [ ('EZ',2**70), ('EB', 2**60), ('PB', 2**50), ('TB', 2**40), ('GB', 2**30), ('MB', 2**20), ('KB', 2**10), ('B', 1) ]
+    for unit,value in units:
+        if filesize.endswith(unit):
+            number = filesize[:-len(unit)].strip()
+            if number.isdigit():
+                return round(float(number)*value)
+    return (int(filesize) if filesize.isdigit() else None)
+#------------------------------------------------------------------------------
 # Set of functions used for a progress bar
 #------------------------------------------------------------------------------
 
@@ -629,10 +641,14 @@ def getMinMaxSizeFromLimit(limit):
         if not maxsize:
             maxsize = str(MAX_FILE_SIZE)
 
-        if maxsize and minsize and int(maxsize) < int(minsize):
-            Logger().log("You are dumb, but it's fine, I will swap limits", color='RED')
-            return int(maxsize), int(minsize)
-        return int(minsize), int(maxsize)
+        maxsize = humanReadableSizeToBytes(maxsize)
+        minsize = humanReadableSizeToBytes(minsize)
+        if not maxsize or not minsize:
+            return None
+        if maxsize < minsize:
+            Logger().log("You are dumb, but it's fine, I will swap limits", color='YELLOW')
+            return maxsize, minsize
+        return minsize, maxsize
     else:
         return 0, MAX_FILE_SIZE
 
@@ -665,7 +681,7 @@ def fetch_urls(url_list, keywords, start, smart, url_list_supplied, verbose):
 def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, directory, contentFile, verbose, timeout, recursion_depth, blacklist_file, whitelist_file, url_list):
     downloaded = 0
     start = 0
-    minsize, maxsize = getMinMaxSizeFromLimit(limit)
+    minsize, maxsize = limit
     compiled_regex,regex_str = build_regex(getfiles, tags, regex, extensions)
     blacklist = build_regex_list_from_file(blacklist_file) if blacklist_file else []
     whitelist = build_regex_list_from_file(whitelist_file) if whitelist_file else []
@@ -729,7 +745,7 @@ def parse_input():
 
     filesgroup = OptionGroup(parser, "Files (-f) Crawler Arguments")
     filesgroup.add_option('-a', '--ask', help='Ask before downloading', action="store_true", dest="ask", default=False)
-    filesgroup.add_option('-l', '--limit', help='File size limit in bytes separated by a hyphen (example: 500-1200 for files between 500 and 1200 bytes, -500 for files smaller than 500 bytes, 500- for files larger than 500 bytes) (Default: None)', dest="limit", type='string', default=None)
+    filesgroup.add_option('-l', '--limit', help='File size limit in bytes separated by a hyphen (example: 500-1200 for files between 500 and 1200 bytes, -500 for files smaller than 500 bytes, 500- for files larger than 500 bytes. You can use human-readable suffixes such as MB, KB, GB, etc. E.g.: 50MB- means files larger than 50 MB) (Default: None)', dest="limit", type='string', default=None)
     filesgroup.add_option('-n', '--number', help='Number of files to download until crawler stops (Default: Max)', dest="maxfiles", type='int', default=None)
     filesgroup.add_option('-e', '--extensions', help='A quoted list of file extensions separated by spaces. Default: all', dest='extensions', type='string', default='[a-zA-Z0-9]+')
     filesgroup.add_option('-s', '--smart', help='Smart file search, will highly reduce the crawling time but might not crawl all the results. Basically the same as appending \'intitle:index of\' to your keywords.', action="store_true", dest="smart", default=False)
@@ -759,8 +775,12 @@ def parse_input():
         parser.error('You must specify keywords when crawling for content.')
     if options.getfiles and options.tags and options.regex:
         parser.error("You can't pick both file name search options: -t or -r/-m")
-    if options.getfiles and options.limit and '-' not in options.limit:
-        parser.error('Limits must be separated by a hyphen.')
+    if options.getfiles and options.limit:
+        if '-' not in options.limit:
+            parser.error('Limits must be separated by a hyphen.')
+        options.limit = getMinMaxSizeFromLimit(options.limit)
+        if not options.limit:
+            parser.error('Invalid limits supplied.')
     if not options.getfiles and not options.regex:
         parser.error('You must specify a matching regex (-m/-r) when crawling for content.')
     if not options.getfiles and (options.ask or options.limit or options.maxfiles or options.smart):
