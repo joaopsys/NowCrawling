@@ -74,13 +74,23 @@ nowcrawling -f -k "space wallpapers" -t "1920" -e "jpg jpeg png" -d space -l 100
 
 ---- Using regular expressions in the file names
 
-This is an example for advanced users who want to explore NowCrawling really deeply. We allow the user to specify a regular expression for file names. Let's take the game of thrones example above and TODO FIXME FIXME FIXME FIXME TODO FIXME FIXME dizer que pode haver e01s01 e mostrar uma regex para isso com -r (s01e01|e01s01) BLA BLA FIXME FIXME TOD TODO
+This is an example for advanced users who want to go deep into NowCrawling's functionalities. We allow the user to specify a regular expression for file names. 
 
-Content Crawling:
+Let's take the game of thrones example above and imagine we want NowCrawling to catch not only files with 's01e01' in their name, but also 'e01s01'. Instead of making two different crawls for this, we can simply specify a regular expression instead of the -t flag:
+
+nowcrawling -f -k "game of thrones" -r "(s01e01|e01s01)" -e "mkv mp4 avi" -s -a -l 100000000-
+
+-r "(s01e01|e01s01)" -> The regular expression you want the file name to match. In this case we force the file name to contain EITHER s01e01 OR e01s01.
+
+-- Content Crawling:
 
 nowcrawling -c
 
 If you decided to crawl for content, you must use the -c argument.
+
+--- Content Crawling Examples:
+
+---- Fetching all gmail addresses we can find
 
 Let's imagine you want to find a bunch of GMail e-mails:
 
