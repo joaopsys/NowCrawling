@@ -643,7 +643,8 @@ def getMinMaxSizeFromLimit(limit):
 
         maxsize = humanReadableSizeToBytes(maxsize)
         minsize = humanReadableSizeToBytes(minsize)
-        if not maxsize or not minsize:
+
+        if maxsize==None or minsize==None:
             return None
         if maxsize < minsize:
             Logger().log("You are dumb, but it's fine, I will swap limits", color='YELLOW')
