@@ -658,7 +658,7 @@ def getMinMaxSizeFromLimit(limit):
 
 def build_regex_list_from_file(file_path):
     with open(file_path) as f:
-        lines = [line.strip() for line in f.readlines() if not line.strip().startswith('#')]
+        lines = [line.strip() for line in f.readlines() if line and not line.strip().startswith('#')]
         return [ (regex, re.compile('^'+regex+'$', re.IGNORECASE)) for regex in lines]
 
 # When in content mode, use this to log all the matches. Possibly logging to an output file.
@@ -732,7 +732,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
 
 def get_url_list(file_path):
     with open(file_path) as f:
-        return [url.strip() for url in f.readlines() if not url.startswith('#')]
+        return [url.strip() for url in f.readlines() if url and not url.startswith('#')]
 
 
 def parse_input():
