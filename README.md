@@ -3,7 +3,7 @@
 
 **So what's it really all about?** Lots of things! Want to search for a generic wallpaper and download all the images you can find? Want to google for all emails from a given domain? Want to automatically download all listed files in a certain webserver? **NowCrawling** helps you do this, with loads of options.
 
-To install, see [here](#user-content-how-do-i-installuninstall-it). [Below](#example-usage) is a sequence of example use cases with a detailed explanation. For a more detailed FAQ, see [here](#faq).
+To install, see [here](#user-content-how-do-i-installuninstall-it). [Below](#example-usage) is a sequence of example use cases with a detailed explanation. For a more detailed FAQ, see [here](#general-faq).
 
 Table of Contents
 =================
@@ -217,7 +217,7 @@ You should already be familiar with the `-f`, `-u`, `-e`, and `-d`options. If yo
 #### Whitelists and Blacklists
 You'll quickly notice that while **NowCrawling** is fast (particularly with PyPy), it can't do wonders. Websites such as Youtube or Google Plus have complex HTML and take longer to process. Yet, most times you won't even want to include these pages in your search. It makes sense, then, to be able to **blacklist certain domains** -- which **NowCrawling** supports.
 
-Similarly, you may be interested in only accessing a restricted set of domains To this end, you can use **whitelists**! Blacklists and whitelists are particularly valuable when you are crawling at higher [recursion levels](#going-deeper-crawling-linked-pages-too-eg-folders-in-fileservers), such as `-z 2`and `-z 3`, because they help you filter out lots of unwanted pages.
+Similarly, you may be interested in only accessing a restricted set of domains. To this end, you can use **whitelists**! Blacklists and whitelists are particularly valuable when you are crawling at higher [recursion levels](#going-deeper-crawling-linked-pages-too-eg-folders-in-fileservers), such as `-z 2`and `-z 3`, because they help you filter out lots of unwanted pages.
 
 Both whitelists and blacklists use **_domain files_**. These files contain one domain regex per line (with the possibility of using '#') for comments. For instance, you can match all .com domains with `.*\.com`; you can also match youtube with `.*youtube.*\.com`. If you have good regex skills, you'll find writing *domain files* to be a piece of cake.
 
