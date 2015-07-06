@@ -114,7 +114,7 @@ The previous example shows how you can find an email address dump, but with a bi
 
 ##### Command
 
-    nowcrawling.py -c -k "gmail leak dump passwords" -m "[a-zA-Z0-9]*?@gmail\.com:[a-zA-Z0-9]* -o usernames_and_passwords.txt
+    nowcrawling -c -k "gmail leak dump passwords" -m "[a-zA-Z0-9]*?@gmail\.com:[a-zA-Z0-9]* -o usernames_and_passwords.txt
 
 ##### Explanation
 
@@ -129,14 +129,14 @@ Suppose you want to find credit card numbers that are out on the web, for whatev
 
 ##### Command
 
-    nowcrawling.py -c -k "credit cards leak" -m "[0-9]{4}[- ][0-9]{4}[- ][0-9]{4}[- ][0-9]{4}" -o creditcards.txt
+    nowcrawling -c -k "credit cards leak" -m "[0-9]{4}[- ][0-9]{4}[- ][0-9]{4}[- ][0-9]{4}" -o creditcards.txt
 
 ##### Explanation
 
 The following options are used **(note that nearly all of these are fully case insensitive, as well as their arguments)**:
 * `-c`, `--content`: This tells **NowCrawling** that you want to use it in *Content Crawling Mode*, whereby it will look for content matches and print them to the screen and, optionally, save them to a file. An alternative mode, which we covered [previously](FIXME), is the *File Crawling Mode* (`-f`, `--file-crawling`).
 * `-k`, `--keywords`: Explained in the [previous example](FIXME). Use for querying Google. In this particular case, we do a generic search for a "credit cards leak".
-* `-m`, `--match`: Explained in the [previous example](FIXME). We use this option to pass our content matching regex. In this particular case, we're looking for four chunks of four digits divided by a space or a hyphen. As with all regexesm this can be greatly improved by, e.g., specifying the first digits of the card, since they decide the credit card corporation (e.g. 5 for MasterCard and 4 for Visa). **The beauty of NowCrawling's *Content Crawling Mode* is precisely that it all depends on the user's ability to produce great regular expressions!**
+* `-m`, `--match`: Explained in the [previous example](FIXME). We use this option to pass our content matching regex. In this particular case, we're looking for four chunks of four digits divided by a space or a hyphen. As with all regexes, this can be greatly improved, for example by specifying the first digits of the card, since they decide the credit card corporation (e.g. 5 for MasterCard and 4 for Visa). **The beauty of NowCrawling's *Content Crawling Mode* is precisely that it all depends on the user's ability to produce great regular expressions!**
 * `-o`, `--output-file`: Explained in the [previous example](FIXME). Stores all found credit card numbers in the desired output file.
 ### Advanced Crawling
 Below is a series of more advanced examples where additional, more complex functionality of *NowCrawling* is used.
@@ -148,7 +148,7 @@ Sometimes, when crawling for files, your search will return a page which does no
 
 ##### Command
 
-    nowcrawling.py -f -u "list:http://www.mmnt.net/db/0/0/195.137.185.2/Music/Iron%20Maiden" -e "mp3" -d "Iron Maiden" -z 2
+    nowcrawling -f -u "list:http://www.mmnt.net/db/0/0/195.137.185.2/Music/Iron%20Maiden" -e "mp3" -d "Iron Maiden" -z 2
 
 ##### Explanation
 
@@ -183,12 +183,12 @@ In [another example](FIXME), we showed how simple it was to use equally simple r
 
 ##### Example Command 1
 
-    nowcrawling.py -c -k "email leak dump passwords" -m "[a-zA-Z0-9][a-zA-Z0-9\._]*?@[a-zA-Z0-9]+?\.[a-zA-Z][a-zA-Z]?[a-zA-Z]?:[a-zA-Z0-9\._*\!\@\#\$\%\€\&\=\-\+]+" -o leaked_emails_and_passwords.txt
+    nowcrawling -c -k "email leak dump passwords" -m "[a-zA-Z0-9][a-zA-Z0-9\._]*?@[a-zA-Z0-9]+?\.[a-zA-Z][a-zA-Z]?[a-zA-Z]?:[a-zA-Z0-9\._*\!\@\#\$\%\€\&\=\-\+]+" -o leaked_emails_and_passwords.txt
     
 The above command gives impressive results, but we could try to leverage the power of Google to do something more sophisticated. Many leaks come from websites such as [pastebin.com](http://pastebin.com), so why not try to go through Pastebin, using [whitelists](FIXME)? Furthermore, sometimes leaks happen in "close pasties", so we can also try to crawl these neighbouring pasties, which might appear as links in the original pasties. Thus, we can use [higher recursion depth levels](FIXME), combined with whitelists to achieve faster results, at the cost of some leaked emails and passwords:
 
 ##### Example Command 2
-    nowcrawling.py -c -k "email leak dump passwords" -m "[a-zA-Z0-9][a-zA-Z0-9\._]*?@[a-zA-Z0-9]+?\.[a-zA-Z][a-zA-Z]?[a-zA-Z]?:[a-zA-Z0-9\._*\!\@\#\$\%\€\&\=\-\+]+" -o leaked_emails_and_passwords.txt -z 2 -w whitelist.list
+    nowcrawling -c -k "email leak dump passwords" -m "[a-zA-Z0-9][a-zA-Z0-9\._]*?@[a-zA-Z0-9]+?\.[a-zA-Z][a-zA-Z]?[a-zA-Z]?:[a-zA-Z0-9\._*\!\@\#\$\%\€\&\=\-\+]+" -o leaked_emails_and_passwords.txt -z 2 -w whitelist.list
     
 where whitelist.list contains:
 
