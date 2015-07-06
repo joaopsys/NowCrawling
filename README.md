@@ -9,43 +9,26 @@ Table of Contents
 =================
 
   * [NowCrawling](#nowcrawling)
-    * [Example Usage](#example-usage)
-      * [File Crawling Mode examples](#file-crawling-mode-examples)
+    * **[Example Usage](#example-usage)**
+      * **[File Crawling Mode examples](#file-crawling-mode-examples)**
         * [Downloading an episode of a TV series](#downloading-an-episode-of-a-tv-series)
-          * [Command](#command)
-          * [Explanation](#explanation)
         * [Downloading a song](#downloading-a-song)
-          * [Command](#command-1)
-          * [Explanation](#explanation-1)
         * [Downloading lots of HD wallpapers to a specific folder](#downloading-lots-of-hd-wallpapers-to-a-specific-folder)
-          * [Command](#command-2)
-          * [Explanation](#explanation-2)
         * [Downloading files off of your own URLs](#downloading-files-off-of-your-own-urls)
-          * [Command](#command-3)
-          * [Explanation](#explanation-3)
         * [Using your own regexes](#using-your-own-regexes)
-          * [Command](#command-4)
-          * [Explanation](#explanation-4)
-      * [Content Crawling Mode examples](#content-crawling-mode-examples)
+      * **[Content Crawling Mode examples](#content-crawling-mode-examples)**
         * [Finding leaked gmail addresses](#finding-leaked-gmail-addresses)
-          * [Command](#command-5)
-          * [Explanation](#explanation-5)
         * [Finding leaked gmail addresses <em>and</em> passwords](#finding-leaked-gmail-addresses-and-passwords)
-          * [Command](#command-6)
-          * [Explanation](#explanation-6)
         * [Finding credit card numbers on the web](#finding-credit-card-numbers-on-the-web)
-          * [Command](#command-7)
-          * [Explanation](#explanation-7)
-      * [Advanced Crawling](#advanced-crawling)
+
+      * **[Advanced Crawling](#advanced-crawling)**
         * [Going deeper: crawling linked pages too (e.g. folders in fileservers)](#going-deeper-crawling-linked-pages-too-eg-folders-in-fileservers)
-          * [Command](#command-8)
-          * [Explanation](#explanation-8)
+
         * [Verbosity](#verbosity)
         * [Whitelists and Blacklists](#whitelists-and-blacklists)
         * [Finding leaked emails and passwords with better regexes](#finding-leaked-emails-and-passwords-with-better-regexes)
-          * [Example Command 1](#example-command-1)
-          * [Example Command 2](#example-command-2)
-    * [FAQ](#faq)
+
+    * **[FAQ](#faq)**
       * [How does NowCrawling really work?](#how-does-nowcrawling-really-work)
       * [Is this illegal?](#is-this-illegal)
       * [How does NowCrawling deal with javascript?](#how-does-nowcrawling-deal-with-javascript)
@@ -369,4 +352,5 @@ Not at the moment. You probably ask this if you're familiar with [Pastebin Crawl
 This is not implemented, but we plan to do so. Note that parallel downloads won't really give you a big boost. The only real advantage is that if two different threads handle downloading and page parsing in parallel, you might get a boost, as more pages can be parses while the download is happening. For this reason, we'll probably initially just implement a download queue. This also raises problems with the standard output and verbosity (if two threads try to print at the same time, and, in particular, if one of them is a progress bar, what will happen?). Additionally, with higher recursion depth levels we already do something to try and minimize this issue: we don't download files until we've finished visiting the whole recursion branch (e.g. even if you do `-z 100`, and get 3 Google search results, there will only be three periods during which downloads will be allowed: after the first page (and its web tree) has been visited, after the second and after the third).
 
 Hang on and it might come in a future release :)
+
 
