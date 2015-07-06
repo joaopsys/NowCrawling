@@ -120,7 +120,7 @@ The previous example shows how you can find an email address dump, but with a bi
 
 The following options are used **(note that nearly all of these are fully case insensitive, as well as their arguments)**:
 * `-c`, `--content`: This tells **NowCrawling** that you want to use it in *Content Crawling Mode*, whereby it will look for content matches and print them to the screen and, optionally, save them to a file. An alternative mode, which we covered [previously](FIXME), is the *File Crawling Mode* (`-f`, `--file-crawling`).
-* `-k`, `--keywords`: Explained in the [previous example](FIXME). Use for querying Google. In this particular case, we do a generic search for "gmail leak dump passwords". Of course you can refine the search with Google specific keywords to make the results better. Also note that **you can use the *smart search* (`-s`) functionality in *Content Crawling Mode*** too!
+* `-k`, `--keywords`: Explained in the [previous example](FIXME). Use for querying Google. In this particular case, we do a generic search for "gmail leak dump passwords". Of course you can refine the search with Google specific keywords to make the results better. Also note that **you can use the *smart search* (`-s`) functionality in *Content Crawling Mode* ** too!
 * `-m`, `--match`: Explained in the [previous example](FIXME). This time, we modify our regex to include a grossly oversimplified password (with only alphanumeric characters) after a ":" and the email. This gives (perhaps surprisingly) good results!
 * `-o`, `--output-file`: Explained in the [previous example](FIXME). Stores all found leaked emails and passwords in the desired output file.
 
@@ -138,6 +138,7 @@ The following options are used **(note that nearly all of these are fully case i
 * `-k`, `--keywords`: Explained in the [previous example](FIXME). Use for querying Google. In this particular case, we do a generic search for a "credit cards leak".
 * `-m`, `--match`: Explained in the [previous example](FIXME). We use this option to pass our content matching regex. In this particular case, we're looking for four chunks of four digits divided by a space or a hyphen. As with all regexes, this can be greatly improved, for example by specifying the first digits of the card, since they decide the credit card corporation (e.g. 5 for MasterCard and 4 for Visa). **The beauty of NowCrawling's *Content Crawling Mode* is precisely that it all depends on the user's ability to produce great regular expressions!**
 * `-o`, `--output-file`: Explained in the [previous example](FIXME). Stores all found credit card numbers in the desired output file.
+
 ### Advanced Crawling
 Below is a series of more advanced examples where additional, more complex functionality of *NowCrawling* is used.
 
@@ -156,12 +157,16 @@ You should already be familiar with the `-f`, `-u`, `-e`, and `-d`options. If yo
 
 `-z`,`--recursion--depth`: This option changes the *recursion depth* of **NowCrawling**. With `-z 2`, we are telling it to visit pages inside the supplied URL itself. If we did `-z 3`, we would allow for even "deeper" searches. **This option is very powerful, and can be used in both *File Content Mode* and *Content Crawling Mode*, but you should be wary of its implications!** The number of visited pages grows **exponentially** with the recursion depth. Consider this, if you visit 10 pages and each of them has 50 links (most of them have over 100 links), you'll be crawling 500 pages instead of 10!
 
+
+#### Verbosity
+**NowCrawling** tries to be quite silent when it runs, so as not to spam the standard output. It displays very little information: the current file download progress and the matched content. However, you might be interested in getting more information about what it's doing. For this, you can use `-v`,`--verbose` to enable **high verbosity**. With this flag, **NowCrawling** will print out loads of useful output, showing the recursion depth, all the URLs being expected, their errors, the progress in the current recursion tree branch, and others. If you like to get the maximum Logging information, it might be a good idea to run **NowCrawling** with `-v` and redirect the relevant output to a file with `-d` (for *File Crawling Mode*) and `-o` (for *Content Crawling Mode*).
+
 #### Whitelists and Blacklists
 You'll quickly notice that while **NowCrawling** is fast (particularly with PyPy), it can't do wonders. Websites such as Youtube or Google Plus have complex HTML and take longer to process. Yet, most times you won't even want to include these pages in your search. It makes sense, then, to be able to **blacklist certain domains** -- which **NowCrawling** supports.
 
 Similarly, you may be interested in only accessing a restricted set of domains To this end, you can use **whitelists**! Blacklists and whitelists are particularly valuable when you are crawling at higher [recursion levels](FIXME), such as `-z 2`and `-z 3`, because they help you filter out lots of unwanted pages.
 
-Both whitelists and blacklists use ***domain files***. These files contain one domain regex per line (with the possibility of using '#') for comments. For instance, you can match all .com domains with `.*\.com`; you can also match youtube with `.*youtube.*\.com`. If you have good regex skills, you'll find writing *domain files* to be a piece of cake.
+Both whitelists and blacklists use ** *domain files* **. These files contain one domain regex per line (with the possibility of using '#') for comments. For instance, you can match all .com domains with `.*\.com`; you can also match youtube with `.*youtube.*\.com`. If you have good regex skills, you'll find writing *domain files* to be a piece of cake.
 
 To tell **NowCrawling** to use a **whitelist** use `-w`,`--whitelist`, e.g.:
 
@@ -274,8 +279,27 @@ You can't be *permanently* banned, but you will on rare occasions be temporarily
 
 We plan to introduce a "back-off time" in the future for when we detect that Google is temporarily blocking you. This way, **NowCrawling** won't stop and print an error message but, rather, will keep trying with appropriate time intervals, allowing you to leave it running on your machine without worrying about it.
 
-### 
+### When I run NowCrawling with the same arguments at two different times, results are different! Why is that?
 
-# TO BE CONTINUED
+You only see this behavior when you use `-k` (rather than `-u`). This is a consequence of the way Google works. When we ask it for results, it may present them randomly, thus changing their order. In the long run, both executions will lead to the same results, even if in a different order.
 
+There are a couple of things that we could do to minimize this difference. These include sorting the search results a priori and buffering them in batches of 100 before expecting them. There hasn't been great need for this, so it's not implemented at the moment.
+
+### I'm running Windows and NowCrawling told me "Windows can't display this message"
+
+This is a problem with Windows' command line application. It has very limited support for UTF-8 and might cause some errors if we try to print characters out of its default codepage. We catch these exceptions and do our best to ignore them, but there is really nothing we can do (nor can Python). We have some workaround ideas, but since currently this only affects printing and not actual functionality, we won't yet try them around. Also see [this FAQ question](FIXME).
+
+### Why does NowCrawling sometimes visit weird looking URLs and get an obvious 404?
+
+**NowCrawling** was designed to find URLs anywhere in a webpage. This falls under the assumption that, for instance, in a forum, not all links will be part of an *a href=* tag/attribute pair. To achieve this, we use a couple of fairly advanced regexes that try to find any possible URL in a webpage. If you've read [RFC 1738](https://www.ietf.org/rfc/rfc1738.txt) for URLs, you'll know that they can be pretty esoteric. In addition to that, many URLs with such esoteric look do exist on the web, containing unescaped spaces, dozens of funky arguments and other things. We try to catch all of these and prefer to catch a couple of expressions that aren't URLs rather than failing to catch all possible URLs. The "wrong" URLs are easily discarded with a 404 when we try to access them.
+
+### Is it possible to provide a list of match regexes and use different output directories/files for each of them?
+
+Not at the moment. You probably ask this if you're familiar with [Pastebin Crawler](https://github.com/Jorl17/Pastebin-Crawler)'s mode of operation. We intend to eventually add support for this.
+
+### When I'm downloading a file, the whole crawling process stops. Could downloading be done in the background, or in parallel?
+
+This is not implemented, but we plan to do so. Note that parallel downloads won't really give you a big boost. The only real advantage is that if two different threads handle downloading and page parsing in parallel, you might get a boost, as more pages can be parses while the download is happening. For this reason, we'll probably initially just implement a download queue. This also raises problems with the standard output and verbosity (if two threads try to print at the same time, and, in particular, if one of them is a progress bar, what will happen?). Additionally, with higher recursion depth levels we already do something to try and minimize this issue: we don't download files until we've finished visiting the whole recursion branch (e.g. even if you do `-z 100`, and get 3 Google search results, there will only be three periods during which downloads will be allowed: after the first page (and its web tree) has been visited, after the second and after the third).
+
+Hang on and it might come in a future release :)
 
