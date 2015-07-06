@@ -775,7 +775,7 @@ def parse_input():
         parser.error('You must specify the crawler type: -f for files or -c for content')
     if options.getfiles and not options.keywords and not options.url_list:
         parser.error('You must either specify keywords (-k) or a URL list (-u) when crawling for files.')
-    if not options.getfiles and not options.keywords:
+    if not options.getfiles and not options.keywords and not options.url_list:
         parser.error('You must specify keywords when crawling for content.')
     if options.getfiles and options.tags and options.regex:
         parser.error("You can't pick both file name search options: -t or -r/-m")
