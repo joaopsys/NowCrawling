@@ -618,7 +618,7 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
         except KeyboardInterrupt:
             Logger().fatal_error('Interrupted. Exiting...')
         except HTTPError as e:
-            Logger().log('File {:s} from {:s} not available ({:d})'.format(file, searchurl, e.code), True, 'RED')
+            doVerbose(lambda: Logger().log('File {:s} from {:s} not available ({:d})'.format(file, searchurl, e.code), True, 'RED'), verbose)
         except URLError as e:
             if 'win' in os.name.lower():
                 doVerbose(lambda: Logger().log('File {:s} from {:s} not available (URL Error)'.format(file, searchurl), True, 'RED'), verbose)
