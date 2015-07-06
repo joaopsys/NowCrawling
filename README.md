@@ -24,7 +24,14 @@ Table of Contents
       * [Verbosity](#verbosity)
       * [Whitelists and Blacklists](#whitelists-and-blacklists)
       * [Finding leaked emails and passwords with better regexes](#finding-leaked-emails-and-passwords-with-better-regexes)
-  * **[FAQ](#faq)**
+    * [How do I install/uninstall it?](#how-do-i-installuninstall-it)
+      * [Examples:](#examples)
+        * [Install](#install)
+        * [Install to /usr/local prefix](#install-to-usrlocal-prefix)
+        * [Uninstall](#uninstall)
+        * [Uninstall from /usr/local prefix](#uninstall-from-usrlocal-prefix)
+    * [How do I run it with PyPy3?](#how-do-i-run-it-with-pypy3)
+  * **[General FAQ](#general-faq)**
     * [How does NowCrawling really work?](#how-does-nowcrawling-really-work)
     * [Is this illegal?](#is-this-illegal)
     * [How does NowCrawling deal with javascript?](#how-does-nowcrawling-deal-with-javascript)
@@ -245,7 +252,37 @@ where whitelist.list contains:
 
     .*pastebin.*
 
-## FAQ
+## How do I install/uninstall it?
+ Just clone the repository and run ``install.sh``, or ``uninstall.sh`` to remove it. It will install to /usr/bin, but you can change this by passing your desired prefix to install.sh, as an argument.
+
+###Examples:
+#### Install
+    git clone https://github.com/xJota/NowCrawling
+    cd NowCrawling
+    chmod +x install.sh uninstall.sh
+    sudo ./install.sh
+#### Install to /usr/local prefix
+    git clone https://github.com/xJota/NowCrawling
+    cd NowCrawling
+    chmod +x install.sh uninstall.sh
+    sudo ./install.sh /usr/local
+#### Uninstall 
+    ./uninstall.sh
+#### Uninstall from /usr/local prefix
+    ./uninstall.sh /usr/local
+
+## How do I run it with PyPy3?
+This is a trivial task. You can simply invoke it with
+
+    pypy3 nowcrawling
+
+instead of    
+
+    nowcrawling
+
+Alternatively, you might want to edit `nowcrawling.py` and modify the first line to point to PyPy3. Then, re-run the `install.sh` script.
+
+## General FAQ
 ### How does NowCrawling really work?
 At its core, **NowCrawling** is really basic stuff. Picture yourself googling for something and then visiting all the results that google gives you. In each result, you carefully look for any URLs that may be in the page (e.g. also in *src=* tags) for interesting content. You may be looking for images, files, leaked emails or something else entirely! As you do this, you download the interesting files you see and proceed to the next search results. **NowCrawling** is doing exactly the same, except in automated exception.
 
@@ -348,5 +385,3 @@ Not at the moment. You probably ask this if you're familiar with [Pastebin Crawl
 This is not implemented, but we plan to do so. Note that parallel downloads won't really give you a big boost. The only real advantage is that if two different threads handle downloading and page parsing in parallel, you might get a boost, as more pages can be parses while the download is happening. For this reason, we'll probably initially just implement a download queue. This also raises problems with the standard output and verbosity (if two threads try to print at the same time, and, in particular, if one of them is a progress bar, what will happen?). Additionally, with higher recursion depth levels we already do something to try and minimize this issue: we don't download files until we've finished visiting the whole recursion branch (e.g. even if you do `-z 100`, and get 3 Google search results, there will only be three periods during which downloads will be allowed: after the first page (and its web tree) has been visited, after the second and after the third).
 
 Hang on and it might come in a future release :)
-
-
