@@ -95,7 +95,7 @@ Since this is an advanced topic, most of these won't be explained. See the [othe
 ### Content Crawling Mode examples
 Below is a series of examples of **NowCrawling** in *Content Crawling Mode*, designed to find patterns on the web (e.g. leaked emails, credit card numbers, funky and weirdly named images, etc). An alternative mode is the *File Crawling Mode*, for which examples can be found [above](FIXME).
 #### Finding leaked gmail addresses
-Content mode is great for finding things on the web. Thinking of building a new spambot targeted at those pesky gmail users? (just kidding, we know it's not you're not *that* pesky) **NowCrawling** can help you! In this example, we do a very simple search for leaked gmail addresses and store them in a file for later inspection.
+Content mode is great for finding things on the web. Thinking of building a new spambot targeted at those pesky gmail users? (just kidding, we know you're not *that* pesky) **NowCrawling** can help you! In this example, we do a very simple search for leaked gmail addresses and store them in a file for later inspection.
 
 ##### Command
 
@@ -106,7 +106,7 @@ Content mode is great for finding things on the web. Thinking of building a new 
 The following options are used **(note that nearly all of these are fully case insensitive, as well as their arguments)**:
 * `-c`, `--content`: This tells **NowCrawling** that you want to use it in *Content Crawling Mode*, whereby it will look for content matches and print them to the screen and, optionally, save them to a file. An alternative mode, which we covered [previously](FIXME), is the *File Crawling Mode* (`-f`, `--file-crawling`).
 * `-k`, `--keywords`: This argument works as it did in *File Crawling Mode* (see [the previous example](FIXME)). In this particular case, we do a generic search for a "gmail leak".
-* `-m`, `--match`: This option is somewhat similar to the `-r` option in *File Crawling Mode*. It is the obligatory regex you want to use to match patterns. Anything that matches the regex supplied with `-m` will be printed to the console and optionally saved to a file (if such a file has been supplied with `-o`). In our example, we supply a **ridiculously oversimplyfying email-match regex** to find leaked gmail emails. This is simple, but has moderately good results and should be enough to get you started.
+* `-m`, `--match`: This option is somewhat similar to the `-r` option in *File Crawling Mode*. It is the obligatory regex you want to use to match patterns. Anything that matches the regex supplied with `-m` will be printed to the console and optionally saved to a file (if such a file has been supplied with `-o`). In our example, we supply a **ridiculously oversimplified email-match regex** to find leaked gmail emails. This is simple, but has moderately good results and should be enough to get you started.
 * `-o`, `--output-file`: This optional parameter can be used to pass a file where **NowCrawling** will write the results, besides the standard output. We use it to redirect all our matches to `leaked_emails.txt`, which we could later use in other ways.
 
 #### Finding leaked gmail addresses *and* passwords
@@ -120,12 +120,12 @@ The previous example shows how you can find an email address dump, but with a bi
 
 The following options are used **(note that nearly all of these are fully case insensitive, as well as their arguments)**:
 * `-c`, `--content`: This tells **NowCrawling** that you want to use it in *Content Crawling Mode*, whereby it will look for content matches and print them to the screen and, optionally, save them to a file. An alternative mode, which we covered [previously](FIXME), is the *File Crawling Mode* (`-f`, `--file-crawling`).
-* `-k`, `--keywords`: Explained in the [previous example](FIXME). Use for querying Google. In this particular case, we do a generic search for a "gmail leak dump passwords". Of course you can refine the search with Google specific keywords to make the results better. Also note that **you can use the *smart search* (`-s`) functionality in *Content Crawling Mode*** too!
+* `-k`, `--keywords`: Explained in the [previous example](FIXME). Use for querying Google. In this particular case, we do a generic search for "gmail leak dump passwords". Of course you can refine the search with Google specific keywords to make the results better. Also note that **you can use the *smart search* (`-s`) functionality in *Content Crawling Mode*** too!
 * `-m`, `--match`: Explained in the [previous example](FIXME). This time, we modify our regex to include a grossly oversimplified password (with only alphanumeric characters) after a ":" and the email. This gives (perhaps surprisingly) good results!
 * `-o`, `--output-file`: Explained in the [previous example](FIXME). Stores all found leaked emails and passwords in the desired output file.
 
 #### Finding credit card numbers on the web
-Suppose you want to find credit card numbers that are out on the web, for whatever reason you see fit. With ** NowCrawling**'s *Content Crawling Mode*, this is a trivial task, provided your regex skills are up to the task.
+Suppose you want to find credit card numbers that are out on the web, for whatever reason you see fit. With ** NowCrawling**'s *Content Crawling Mode*, this is trivial, provided your regex skills are up to the task.
 
 ##### Command
 
@@ -136,7 +136,7 @@ Suppose you want to find credit card numbers that are out on the web, for whatev
 The following options are used **(note that nearly all of these are fully case insensitive, as well as their arguments)**:
 * `-c`, `--content`: This tells **NowCrawling** that you want to use it in *Content Crawling Mode*, whereby it will look for content matches and print them to the screen and, optionally, save them to a file. An alternative mode, which we covered [previously](FIXME), is the *File Crawling Mode* (`-f`, `--file-crawling`).
 * `-k`, `--keywords`: Explained in the [previous example](FIXME). Use for querying Google. In this particular case, we do a generic search for a "credit cards leak".
-* `-m`, `--match`: Explained in the [previous example](FIXME). We use this option to pass our content matching regex. In this particular case, we're looking for four chunks of four digits divided by a space or a hyphen. As with all regexesm this can be greatly improved by, e.g., specyfying the first digits of the card, since they decide the credit card corporation (e.g. 5 for MasterCard and 4 for Visa). **The beauty of NowCrawling's *Content Crawling Mode* is precisely that it all depends on the user's ability to produce great regular expressions!**
+* `-m`, `--match`: Explained in the [previous example](FIXME). We use this option to pass our content matching regex. In this particular case, we're looking for four chunks of four digits divided by a space or a hyphen. As with all regexesm this can be greatly improved by, e.g., specifying the first digits of the card, since they decide the credit card corporation (e.g. 5 for MasterCard and 4 for Visa). **The beauty of NowCrawling's *Content Crawling Mode* is precisely that it all depends on the user's ability to produce great regular expressions!**
 * `-o`, `--output-file`: Explained in the [previous example](FIXME). Stores all found credit card numbers in the desired output file.
 ### Advanced Crawling
 Below is a series of more advanced examples where additional, more complex functionality of *NowCrawling* is used.
@@ -155,10 +155,6 @@ Sometimes, when crawling for files, your search will return a page which does no
 You should already be familiar with the `-f`, `-u`, `-e`, and `-d`options. If you are not, go read their examples [above](FIXME).
 
 `-z`,`--recursion--depth`: This option changes the *recursion depth* of **NowCrawling**. With `-z 2`, we are telling it to visit pages inside the supplied URL itself. If we did `-z 3`, we would allow for even "deeper" searches. **This option is very powerful, and can be used in both *File Content Mode* and *Content Crawling Mode*, but you should be wary of its implications!** The number of visited pages grows **exponentially** with the recursion depth. Consider this, if you visit 10 pages and each of them has 50 links (most of them have over 100 links), you'll be crawling 500 pages instead of 10!
-
-##### Explanation
-
-You should already be familiar with the `-f`, `-u`, `-e`, and `-d`options. If you are not, go read their examples [above](FIXME).
 
 #### Whitelists and Blacklists
 You'll quickly notice that while **NowCrawling** is fast (particularly with PyPy), it can't do wonders. Websites such as Youtube or Google Plus have complex HTML and take longer to process. Yet, most times you won't even want to include these pages in your search. It makes sense, then, to be able to **blacklist certain domains** -- which **NowCrawling** supports.
