@@ -621,14 +621,14 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
             Logger().log('File {:s} from {:s} not available ({:d})'.format(file, searchurl, e.code), True, 'RED')
         except URLError as e:
             if 'win' in os.name.lower():
-                Logger().log('File {:s} from {:s} not available (URL Error)'.format(file, searchurl), True, 'RED')
+                doVerbose(lambda: Logger().log('File {:s} from {:s} not available (URL Error)'.format(file, searchurl), True, 'RED'), verbose);
             else:
-                Logger().log('File {:s} from {:s} not available (URL Error: {:s})'.format(file, searchurl, str(e.reason)), True, 'RED')
+                doVerbose(lambda: Logger().log('File {:s} from {:s} not available (URL Error: {:s})'.format(file, searchurl, str(e.reason)), True, 'RED'), verbose);
         except Exception as e:
             if 'win' in os.name.lower():
-                Logger().log('File {:s} from {:s} not available'.format(file, searchurl), True, 'RED')
+                doVerbose(lambda: Logger().log('File {:s} from {:s} not available'.format(file, searchurl), True, 'RED'), verbose);
             else:
-                Logger().log('File {:s} from {:s} not available ({:s})'.format(file, searchurl, str(e)), True, 'RED')
+                doVerbose(lambda: Logger().log('File {:s} from {:s} not available ({:s})'.format(file, searchurl, str(e)), True, 'RED'), verbose);
 
     return downloaded
 
