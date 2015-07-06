@@ -3,7 +3,7 @@
 
 **So what's it really all about?** Lots of things! Want to search for a generic wallpaper and download all the images you can find? Want to google for all emails from a given domain? Want to automatically download all listed files in a certain webserver? **NowCrawling** helps you do this, with loads of options.
 
-To install, see [here](#how-do-i-installuninstall-it). [Below](#example-usage) is a sequence of example use cases with a detailed explanation. For a more detailed FAQ, see [here](#faq).
+To install, see [here](#user-content-how-do-i-installuninstall-it). [Below](#example-usage) is a sequence of example use cases with a detailed explanation. For a more detailed FAQ, see [here](#faq).
 
 Table of Contents
 =================
@@ -24,7 +24,7 @@ Table of Contents
       * [Verbosity](#verbosity)
       * [Whitelists and Blacklists](#whitelists-and-blacklists)
       * [Finding leaked emails and passwords with better regexes](#finding-leaked-emails-and-passwords-with-better-regexes)
-    * **[How do I install/uninstall it?](#how-do-i-installuninstall-it)**
+    * **[How do I install/uninstall it?](#user-content-how-do-i-installuninstall-it)**
       * [Examples:](#examples)
         * [Install](#install)
         * [Install to /usr/local prefix](#install-to-usrlocal-prefix)
