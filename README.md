@@ -80,7 +80,7 @@ The following options are used **(note that nearly all of these are fully case i
 #### Using your own regexes
 If you're finally getting to grips with **NowCrawling**'s basic commands, such as `-t`, you might consider doing some more advanced crawling by directly building a regex for **NowCrawling** to use.
 
-Take the example seen [previously](FIXME) and imagine that instead of simply matching *"s01e01"* in the file name, you wanted to *also* match *"e01s01". You could run two different NowCrawling instances with different `-t` arguments, or you could replace the `-t` functionality with your own regex to match file names.
+Take the example seen [previously](FIXME) and imagine that instead of simply matching *"s01e01"* in the file name, you wanted to *also* match *"e01s01"*. You could run two different NowCrawling instances with different `-t` arguments, or you could replace the `-t` functionality with your own regex to match file names.
 
 
 ##### Command
@@ -145,7 +145,7 @@ Below is a series of more advanced examples where additional, more complex funct
 #### Going deeper: crawling linked pages too (e.g. folders in fileservers)
 Sometimes, when crawling for files, your search will return a page which does not have the files yet, but which links to a page which does. This is commonly seen in FTP server pages, such as [http://www.mmnt.net/db/0/0/195.137.185.2/Music/Iron%20Maiden](http://www.mmnt.net/db/0/0/195.137.185.2/Music/Iron%20Maiden). In these cases, it would be useful to allow **NowCrawling** to visit these pages too. Well, you can!
 
-**NowCrawling** has the concept of *recursion depth*, which defines how far away from the base URLs (typically found from Google results with `-k`) you want to go looking for results. By default, this *recursion depth* is fixed at 1, meaning you cannot visit pages linked by your search results. In the example of the FTP server page shown above, the directories containing the actual files will not be visited when you pass that URL to the `-u` option. You can override this behavior and tell **NowCrawling** to go deeper, as we show. **Note that you are guaranteed that for each URL found in your Google search (or manually supplied with `-u`), **NowCrawling** won't visit duplicate links.**
+**NowCrawling** has the concept of *recursion depth*, which defines how far away from the base URLs (typically found from Google results with `-k`) you want to go looking for results. By default, this *recursion depth* is fixed at 1, meaning you cannot visit pages linked by your search results. In the example of the FTP server page shown above, the directories containing the actual files will not be visited when you pass that URL to the `-u` option. You can override this behavior and tell **NowCrawling** to go deeper, as we show. **Note that you are guaranteed that for each URL found in your Google search (or manually supplied with `-u`), NowCrawling won't visit duplicate links.**
 
 ##### Command
 
