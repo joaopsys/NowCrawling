@@ -560,6 +560,8 @@ def downloadFile(file, directory, filename):
         ## FIXME Leave the half-file there? For now let's not be intrusive
         print()
         Logger().log('Download of file {:s} interrupted. Continuing...'.format(file),color='YELLOW')
+        return False
+    return True
 
 # Get the filesize of a given URL with the given timeout and headers
 def get_filesize(url, timeout, headers):
@@ -609,24 +611,24 @@ def downloadFiles(downloaded, downloadurls, ask, searchurl, maxfiles, limit,mins
                         continue
 
                 # Get the file
-                doVerbose(lambda: Logger().log('Downloading file {:s} of size {:s}'.format(filename, humanReadableSize(filesize) if filesize>=0 else 'Unknown'),color='GREEN'), verbose)
-                downloadFile(file, directory, filename)
-                doVerbose(lambda: Logger().log('Done downloading file {:s}'.format(filename),color='GREEN'), verbose)
+                Logger().log('Downloading file {:s} of size {:s}'.format(filename, humanReadableSize(filesize) if filesize>=0 else 'Unknown'),color='GREEN')
+                if downloadFile(file, directory, filename):
+                    Logger().log('Done downloading file {:s}'.format(filename),color='GREEN')
                 downloaded += 1
         except KeyboardInterrupt:
             Logger().fatal_error('Interrupted. Exiting...')
         except HTTPError as e:
-            doVerbose(lambda: Logger().log('File {:s} from {:s} not available ({:d})'.format(file, searchurl, e.code), True, 'RED'),verbose)
+            Logger().log('File {:s} from {:s} not available ({:d})'.format(file, searchurl, e.code), True, 'RED')
         except URLError as e:
             if 'win' in os.name.lower():
-                doVerbose(lambda: Logger().log('File {:s} from {:s} not available (URL Error)'.format(file, searchurl), True, 'RED'), verbose)
+                Logger().log('File {:s} from {:s} not available (URL Error)'.format(file, searchurl), True, 'RED')
             else:
-                doVerbose(lambda: Logger().log('File {:s} from {:s} not available (URL Error: {:s})'.format(file, searchurl, str(e.reason)), True, 'RED'), verbose)
+                Logger().log('File {:s} from {:s} not available (URL Error: {:s})'.format(file, searchurl, str(e.reason)), True, 'RED')
         except Exception as e:
             if 'win' in os.name.lower():
-                doVerbose(lambda: Logger().log('File {:s} from {:s} not available'.format(file, searchurl), True, 'RED'), verbose)
+                Logger().log('File {:s} from {:s} not available'.format(file, searchurl), True, 'RED')
             else:
-                doVerbose(lambda: Logger().log('File {:s} from {:s} not available ({:s})'.format(file, searchurl, str(e)), True, 'RED'), verbose)
+                Logger().log('File {:s} from {:s} not available ({:s})'.format(file, searchurl, str(e)), True, 'RED')
 
     return downloaded
 
