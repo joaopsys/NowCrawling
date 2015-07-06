@@ -28,7 +28,7 @@ __copyright__ = "Copyright 2015, João Ricardo Lourenço, João Soares"
 __credits__ = ["João Ricardo Lourenço", "João Soares"]
 __license__ = "GPLv2"
 __email__ = ["jorl17.8@gmail.com", "joaosoares11@hotmail.com"]
-__version__ = "0.9.0"
+__version__ = "0.9.3"
 
 import contextlib
 import os

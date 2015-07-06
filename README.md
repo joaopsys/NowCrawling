@@ -57,7 +57,7 @@ The following options are used **(note that nearly all of these are fully case i
 The following options are used **(note that nearly all of these are fully case insensitive, as well as their arguments)**:
 * `-f`, `--files`: Explained in the [previous example](FIXME). Tells **NowCrawling** that you want to use it in *File Crawling Mode*.
 * `-k`, `--keywords`: Explained in the [previous example](FIXME). This is the base query of the search, as if you were to directly type it in Google. We want any kind of space-related wallpaper!
-* `-t`,`--tags`: Explained in the [previous example](FIXME). As previously, it's good to remember that this flag is optional. Since we are looking mainly for HD wallpapers, we can force part of the filename to be *"1920"*, with the idea of including files whose name contains high definition resolutions (e.g. 1920x1080, 1920x1200, etc). However, by using `-t` in this way we instantly lose all files with random names (e.g. *10wkvnbu4nh8302.png*). On the other hand, if we further wanted to refine our search, we could do `-t "1920 1080"`to guaruantee that both sizes appeared in the file name. **Proper usage of `-t` is, therefore, critical to your crawling results! **If you want more backgrounds, at the risk of quality (and bandwidth), remove `-t` altogether!
+* `-t`,`--tags`: Explained in the [previous example](FIXME). As previously, it's good to remember that this flag is optional. Since we are looking mainly for HD wallpapers, we can force part of the filename to be *"1920"*, with the idea of including files whose name contains high definition resolutions (e.g. 1920x1080, 1920x1200, etc). However, by using `-t` in this way we instantly lose all files with random names (e.g. *10wkvnbu4nh8302.png*). On the other hand, if we further wanted to refine our search, we could do `-t "1920 1080"`to guaruantee that both sizes appeared in the file name. **Proper usage of `-t` is, therefore, critical to your crawling results!** If you want more backgrounds, at the risk of quality (and bandwidth), remove `-t` altogether!
 * `-e`,`--extensions`: Explained in the [previous example](FIXME). We are looking for image file extensions such as *jpg*, *jpeg* and *png*. Note how we automatically exclude *gif* and other formats.
 * `-d`, `--directory`: Specifies a target folder where the files will be downloaded to. If it does not exist, it will be created (however, note that chains of folders will not be created, i.e., in /test/folder/, if `test` does not exist, then `folder` will not be created and downloads will fail). This optional flag is particularly useful for large batch file downloads.
 * `-l`,`--limit`: Explained in the [previous example](FIXME). In order to automatically dismiss erroneous results (1 KB images and other such false positives), we force images to be of at least *100KB*.
@@ -196,6 +196,86 @@ where whitelist.list contains:
 
 ## FAQ
 ### How does NowCrawling really work?
-At its core, **NowCrawling** is really basic stuff. Picture yourself googling for something and then visiting all the results that google gives you. In each result, you carefully look for any URLs that may be in the page (e.g. also in *src=* tags) for interesting content. You may be looking for images, files, leaked emails or something else entirely! As you do this
+At its core, **NowCrawling** is really basic stuff. Picture yourself googling for something and then visiting all the results that google gives you. In each result, you carefully look for any URLs that may be in the page (e.g. also in *src=* tags) for interesting content. You may be looking for images, files, leaked emails or something else entirely! As you do this, you download the interesting files you see and proceed to the next search results. **NowCrawling** is doing exactly the same, except in automated exception.
+
+Internally, its only dependency is Python 3, and everything else is built using the standard library and regular expressions. The project did indeed start as a "glorified automated google search crawler", but it has since grown into a much larger crawler, capable of much more than simple Google crawling.
+### Is this illegal?
+No tool such as this one is illegal by itself in most countries. This does not mean that you can't do illegal things with it. Use common sense -- you can use **NowCrawling** to do many, many things, ranging from finding backgrounds for your next desktop, to downloading pirated content off the web.
+### How does NowCrawling deal with javascript?
+At the moment, it doesn't. NowCrawling only downloads the static HTML file and parses it, much like *wget* would do. Maybe in the future, if it seems necessary, the engine can be reworked to include dynamic page modifications, namely in the form of Javascript
+### I have some websites for which I need to be logged in to access. Can I use NowCrawling with them?
+The short answer is that, no, you can't. Maybe you can get away with acessing them with your browser and then saving a local cached copy of it on your computer and pointing **NowCrawling** to it with `-u "list:file://cached_page.htm"`, but it might not always work.
+
+Perhaps in the future we can implement an interactive mode where you input your username and password and it gets saved in the cookies of the current session.
+
+### The source-code is huge! If NowCrawling is this simple, why is that so?
+**NowCrawling** itself isn't simple. Its idea, and the process it tries to automate, is. There are many different things that **NowCrawling** must deal with, including whitelists, blacklists, progress bars, dealing with time-outs, disconnects, encoding errors, crawling google, crawling webpages, checking their sizes, downloading files, creating directories, dynamically generating regexes, and more. This has to be done as fast as possible to ensure performance. We also provide an extensive Logging support throughout the code, which can be tuned with the `-v, --verbose` option.
+
+### Do you support other search engines (i.e. can `-k` be used with other engines)?
+
+Not at the moment, but this shouldn't be too hard. We tried hard to make the code modular and loosely coupled precisely to implement this kind of functionality in the future. Note that nothing is to stop you from implementing these features yourself and sending us a pull request!
+
+### Why is the *recursion depth* set to 1 by default?
+
+*[Recursion Depth](FIXME)* is very powerful, but can quickly lead to very long waiting times. Try it yourself! Run any search with a recursion depth of 2 and pass in the verbosity flag (`-v`) to see just how many pages are being crawled, most of them without any need for such. This is an expert flag to be used in rare situations where you really know what you're doing.
+
+### What user-agent does NowCrawling report to its websites? Can I change it?
+
+You can't currently change it, but that would be trivial to change. The reason we haven't done it is that we haven't had any real problems with it. **NowCrawling** currently presents itself as
+
+    Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36
+
+### What operating systems does it run on? Is compatibility the same in all of them?
+
+It runs in every major operating system. Windows and *nix. However, colors are currently only supported in *nix. Some websites with funky characters in the names will also trigger encoding errors in Windows (it's the fault of Microsoft's badly designed console) which won't happen in *nix. We've tried to minimize the impact of these errors to the maximum (worst case scenario: you miss some content, but the application doesn't crash)
+
+### Is there a Python 2 port?
+No. It shouldn't be terribly difficult to port it to Python 2, but we don't currently see a reason to do so.
+
+### Can I change the default connection timeout? What's the default?
+
+Yes! The default timeout is 7 seconds, but you can change this with the `-i`,`--ignore-after` flag.
+
+### Can I limit the downloaded files by number or by size?
+
+You can limit the number of downloaded files by their count with the `-n`, `--number` flag. (e.g. to download at most 100 files, do `-n 100`.
+
+You can also limit each file's individual size with the `-l`,`--limit` flag which we explain in [this example](FIXME). In short, the format is `minSize-maxSize`, with these sizes in human-readable form (e.g., 5MB), and the possibility of only supplying one of these arguments. Do read the [example](FIXME) explanation to really understand it.
+
+### How does smart search work?
+The *smart search* (`-s`) option tries to speed Google searches when you're looking for files. It essentially tries to look for public-access repositories and FTP servers, where files are easily listed. This is done by appending the string " intitle:index of " to your query. This obviously leads to faster results because you quickly get to files. However, if your search terms are not right, it might limit your rate of success in finding what you want.
+
+### I'm searching for images. Can NowCrawling automatically detect images in webpages and download them if their name matches my criteria?
+Yes! Besides looking for any reference of a URL in webpages, NowCrawling takes particular care with *src* attributes in HTML (notably in *script* and *img* tags), manually inspecting them for potentially crawlable URLs.
+
+### I've seen my downloads randomly stop for no reason. Why's that?
+If you're not using high verbosity output (`-v`, `--verbosity`), **NowCrawling** will show the least amount of information possible. In general, it will try to only show you the name and progress of the current file being transfered (or, in *Content Crawling Mode*, the matched content). If there's an error (such as a disconnect or other kind of error), the transfer will stop abruptly, as it would with any other application. The key difference is that we don't show errors without `-v`. This is due to the fact that the output would quickly get spammed with many "false errors", coming from "fake 404s" and other similar errors. We might consider changing part of this in future releases.
+
+### What protocols does NowCrawling support?
+Anything that Python 3 supports is automatically supported by NowCrawling. That includes HTTP, HTTPS, FTP, FILE, etc..
+
+### Why should I use NowCrawling?
+This project started because we wanted to make our lives easier. There are many tasks that we can now automate, such as finding backgrounds or finding documents on the web and downloading them *en masse*. We've got a couple of [examples](FIXME) of how **NowCrawling** can really be a helpful tool.
+
+Hopefully, it will also be useful for you. Use it to find news, to google yourself, to crawl that page with millions of images you really wanted to download, to find interesting stuff over at Pastebin and similar sites (though if you're looking for an automated Pastebin crawler, one of us has also developed a [Pastebin Crawler](https://github.com/Jorl17/Pastebin-Crawler) which might be of interest).
+
+### Is PyPy3 signifficantly faster than Python3 with NowCrawling?
+We haven't run any benchmarks yet, but the difference is noticeable, particularly in complex pages. We really recommend you use PyPy3 if you can.
+
+### If you're just crawling webpages, can't it happen that you find a huge page and get stuck downloading it?
+
+We don't visit a page if its bare HTML  is over 20MB (i.e. only the HTML, not the images, scripts, etc). This prevents the situation described, as we encountered it on several occasions, in particular where *mkv* files reported themselves as *text/plain* files.
+
+If the file size can't be determined *a priori*, though, we download the page until the end, regardless of its size. We plan to change this in the future.
+
+### Can I be banned from Google if I overuse NowCrawling?
+
+You can't be *permanently* banned, but you will on rare occasions be temporarily banned for about 30 minutes. This happens when google detects abnormal traffic from your IP, in particular when using *smart search* (`-s`) . Note that these temporary bans also only apply to certain parts of Google. In particular, you can still do regular searches in your browser, insofar as you don't use Google specific keywords such as "intitle" and "inurl" (f you are temporarily banned and use them, Google will give you an HTTP 503).
+
+We plan to introduce a "back-off time" in the future for when we detect that Google is temporarily blocking you. This way, **NowCrawling** won't stop and print an error message but, rather, will keep trying with appropriate time intervals, allowing you to leave it running on your machine without worrying about it.
+
+### 
+
 # TO BE CONTINUED
+
 
