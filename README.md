@@ -7,7 +7,7 @@
 
 Table of Contents
 =================
-  
+
   * **[Example Usage](#example-usage)**
     * **[File Crawling Mode examples](#file-crawling-mode-examples)**
       * [Downloading an episode of a TV series](#downloading-an-episode-of-a-tv-series)
@@ -18,12 +18,12 @@ Table of Contents
     * **[Content Crawling Mode examples](#content-crawling-mode-examples)**
       * [Finding leaked gmail addresses](#finding-leaked-gmail-addresses)
       * [Finding leaked gmail addresses <em>and</em> passwords](#finding-leaked-gmail-addresses-and-passwords)
-      * [Finding credit card numbers on the web](#finding-credit-card-numbers-on-the-web
+      * [Finding credit card numbers on the web](#finding-credit-card-numbers-on-the-web)
     * **[Advanced Crawling](#advanced-crawling)**
-      * [Going deeper: crawling linked pages too (e.g. folders in fileservers)](#going-deeper-crawling-linked-pages-too-eg-folders-in-fileservers
+      * [Going deeper: crawling linked pages too (e.g. folders in fileservers)](#going-deeper-crawling-linked-pages-too-eg-folders-in-fileservers)
       * [Verbosity](#verbosity)
       * [Whitelists and Blacklists](#whitelists-and-blacklists)
-      * [Finding leaked emails and passwords with better regexes](#finding-leaked-emails-and-passwords-with-better-regexes
+      * [Finding leaked emails and passwords with better regexes](#finding-leaked-emails-and-passwords-with-better-regexes)
   * **[FAQ](#faq)**
     * [How does NowCrawling really work?](#how-does-nowcrawling-really-work)
     * [Is this illegal?](#is-this-illegal)
