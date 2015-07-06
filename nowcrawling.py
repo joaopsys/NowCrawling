@@ -28,7 +28,7 @@ __copyright__ = "Copyright 2015, João Ricardo Lourenço, João Soares"
 __credits__ = ["João Ricardo Lourenço", "João Soares"]
 __license__ = "GPLv2"
 __email__ = ["jorl17.8@gmail.com", "joaosoares11@hotmail.com"]
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 
 import contextlib
 import os
@@ -685,12 +685,15 @@ def fetch_urls(url_list, keywords, start, smart, url_list_supplied, verbose):
 def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, directory, contentFile, verbose, timeout, recursion_depth, blacklist_file, whitelist_file, url_list):
     downloaded = 0
     start = 0
-    minsize, maxsize = limit if limit else 0, MAX_FILE_SIZE
+    if limit:
+        minsize, maxsize = limit
+    else:
+        minsize = 0
+        maxsize = MAX_FILE_SIZE
     compiled_regex,regex_str = build_regex(getfiles, tags, regex, extensions)
     blacklist = build_regex_list_from_file(blacklist_file) if blacklist_file else []
     whitelist = build_regex_list_from_file(whitelist_file) if whitelist_file else []
     url_list_supplied = (url_list != None)
-
     doVerbose(lambda: Logger().log('Search regex: ->\'{:s}\'<-.'.format(regex_as_string(regex_str))), verbose)
     try:
         while True:
