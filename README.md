@@ -120,12 +120,12 @@ The previous example shows how you can find an email address dump, but with a bi
 
 The following options are used **(note that nearly all of these are fully case insensitive, as well as their arguments)**:
 * `-c`, `--content`: This tells **NowCrawling** that you want to use it in *Content Crawling Mode*, whereby it will look for content matches and print them to the screen and, optionally, save them to a file. An alternative mode, which we covered [previously](FIXME), is the *File Crawling Mode* (`-f`, `--file-crawling`).
-* `-k`, `--keywords`: Explained in the [previous example](FIXME). Use for querying Google. In this particular case, we do a generic search for "gmail leak dump passwords". Of course you can refine the search with Google specific keywords to make the results better. Also note that **you can use the *smart search* (`-s`) functionality in *Content Crawling Mode* ** too!
+* `-k`, `--keywords`: Explained in the [previous example](FIXME). Use for querying Google. In this particular case, we do a generic search for "gmail leak dump passwords". Of course you can refine the search with Google specific keywords to make the results better. Also note that **you can use the _smart search_ (`-s`) functionality in _Content Crawling Mode_** too!
 * `-m`, `--match`: Explained in the [previous example](FIXME). This time, we modify our regex to include a grossly oversimplified password (with only alphanumeric characters) after a ":" and the email. This gives (perhaps surprisingly) good results!
 * `-o`, `--output-file`: Explained in the [previous example](FIXME). Stores all found leaked emails and passwords in the desired output file.
 
 #### Finding credit card numbers on the web
-Suppose you want to find credit card numbers that are out on the web, for whatever reason you see fit. With ** NowCrawling**'s *Content Crawling Mode*, this is trivial, provided your regex skills are up to the task.
+Suppose you want to find credit card numbers that are out on the web, for whatever reason you see fit. With **NowCrawling**'s *Content Crawling Mode*, this is trivial, provided your regex skills are up to the task.
 
 ##### Command
 
@@ -166,7 +166,7 @@ You'll quickly notice that while **NowCrawling** is fast (particularly with PyPy
 
 Similarly, you may be interested in only accessing a restricted set of domains To this end, you can use **whitelists**! Blacklists and whitelists are particularly valuable when you are crawling at higher [recursion levels](FIXME), such as `-z 2`and `-z 3`, because they help you filter out lots of unwanted pages.
 
-Both whitelists and blacklists use ** *domain files* **. These files contain one domain regex per line (with the possibility of using '#') for comments. For instance, you can match all .com domains with `.*\.com`; you can also match youtube with `.*youtube.*\.com`. If you have good regex skills, you'll find writing *domain files* to be a piece of cake.
+Both whitelists and blacklists use **_domain files_**. These files contain one domain regex per line (with the possibility of using '#') for comments. For instance, you can match all .com domains with `.*\.com`; you can also match youtube with `.*youtube.*\.com`. If you have good regex skills, you'll find writing *domain files* to be a piece of cake.
 
 To tell **NowCrawling** to use a **whitelist** use `-w`,`--whitelist`, e.g.:
 
