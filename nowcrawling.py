@@ -200,6 +200,7 @@ def humanReadableSizeToBytes(filesize):
             if number.isdigit():
                 return round(float(number)*value)
     return (int(filesize) if filesize.isdigit() else None)
+
 #------------------------------------------------------------------------------
 # Set of functions used for a progress bar
 #------------------------------------------------------------------------------
@@ -254,7 +255,7 @@ def doVerbose(f, verbose=False):
 
 #------------------------------------------------------------------------------
 # Modified urllib.request.urlretrieve which supports sending custom headers.
-# It is a modified version of the same function grabbed from some python soruce
+# It is a modified version of the same function grabbed from some python source
 # code (sadly, Pycharm fucked up so I don't know what). Several things we didn't
 # need were removed
 #------------------------------------------------------------------------------
@@ -682,7 +683,7 @@ def fetch_urls(url_list, keywords, start, smart, url_list_supplied, verbose):
 def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, directory, contentFile, verbose, timeout, recursion_depth, blacklist_file, whitelist_file, url_list):
     downloaded = 0
     start = 0
-    minsize, maxsize = limit
+    minsize, maxsize = limit if limit else 0, MAX_FILE_SIZE
     compiled_regex,regex_str = build_regex(getfiles, tags, regex, extensions)
     blacklist = build_regex_list_from_file(blacklist_file) if blacklist_file else []
     whitelist = build_regex_list_from_file(whitelist_file) if whitelist_file else []
