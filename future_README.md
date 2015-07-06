@@ -103,3 +103,15 @@ nowcrawling -c -k "gmail leak" -m "[a-zA-Z0-9]*?@gmail.com" -o output.txt
 -o output.txt -> The output file of our results. In the end it will contain all the e-mail addresses it could find.
 
 You can find many more useful options by using the -h argument (for example -z for recursion depth, which will greatly expand your crawling range)
+
+---- Fetching all credit card numbers
+
+Imagine that, for some reason you want to fetch all the credit card numbers you can find on the internet. With NowCrawling's content crawling it's quite easy:
+
+nowcrawling.py -c -k "credit cards leak" -m "[0-9]{4}[- ][0-9]{4}[- ][0-9]{4}[- ][0-9]{4}" -o creditcards.txt
+
+-k "credit cards leak" -> Explained previously. You can try other search terms for more results, but we know that leaks usually contain the information we want.
+
+-m "[0-9]{4}[- ][0-9]{4}[- ][0-9]{4}[- ][0-9]{4}" -> The magical regular expression. This is the beauty of content crawling: It all depends on the user's ability to produce regular expressions. In this case, we're looking for four chunks of four digits divided by a space or a hyphen. As with all regexes, this can be greatly improved by, for example, specifying the first digits of the card since the first digits decide the credit card corporation (e.g 5 for MasterCard, 4 for Visa).
+
+-o creditcards.txt -> Output file
