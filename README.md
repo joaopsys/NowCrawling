@@ -13,7 +13,7 @@ Table of Contents
       * [Downloading an episode of a TV series](#downloading-an-episode-of-a-tv-series)
       * [Downloading a song](#downloading-a-song)
       * [Downloading lots of HD wallpapers to a specific folder](#downloading-lots-of-hd-wallpapers-to-a-specific-folder)
-      * [Downloading files off of your own URLs](#downloading-files-off-of-your-own-urls)
+      * [Downloading files off of your own URLs](#user-content-downloading-files-off-of-your-own-urls)
       * [Using your own regexes](#using-your-own-regexes)
     * **[Content Crawling Mode examples](#content-crawling-mode-examples)**
       * [Finding leaked gmail addresses](#finding-leaked-gmail-addresses)
@@ -45,18 +45,19 @@ Table of Contents
     * [Can I change the default connection timeout? What's the default?](#can-i-change-the-default-connection-timeout-whats-the-default)
     * [Can I limit the downloaded files by number or by size?](#can-i-limit-the-downloaded-files-by-number-or-by-size)
     * [How does smart search work?](#how-does-smart-search-work)
-    * [I'm searching for images. Can NowCrawling automatically detect images in webpages and download them if their name matches my criteria?](#im-searching-for-images-canowcrawling-automatically-detect-images-in-webpages-and-download-them-if-their-name-matches-my-criteria)
+    * [I'm searching for images. Can NowCrawling automatically detect images in webpages and download them if their name matches my criteria?](#user-content-im-searching-for-images-canowcrawling-automatically-detect-images-in-webpages-and-download-them-if-their-name-matches-my-criteria)
     * [I've seen my downloads randomly stop for no reason. Why's that?](#ive-seen-my-downloads-randomly-stop-for-no-reason-whys-that)
     * [What protocols does NowCrawling support?](#what-protocols-does-nowcrawling-support)
     * [Why should I use NowCrawling?](#why-should-i-use-nowcrawling)
     * [Is PyPy3 signifficantly faster than Python3 with NowCrawling?](#is-pypy3-signifficantly-faster-than-python3-with-nowcrawling)
-    * [If you're just crawling webpages, can't it happen that you find a huge page and get stuck downloading it?](#if-youre-just-crawling-webpages-cant-it-happen-that-yofind-a-huge-page-and-get-stuck-downloading-it)
-    * [Can I be banned from Google if I overuse NowCrawling?](#can-i-be-banned-from-google-if-i-overuse-nowcrawling)
-    * [When I run NowCrawling with the same arguments at two different times, results are different! Why is that?](#when-i-run-nowcrawling-with-the-same-arguments-at-twdifferent-times-results-are-different-why-is-that)
+    * [If you're just crawling webpages, can't it happen that you find a huge page and get stuck downloading it?](#user-content-if-youre-just-crawling-webpages-cant-it-happen-that-yofind-a-huge-page-and-get-stuck-downloading-it)
+    * [Can I be banned from Google if I overuse NowCrawling?](#user-content-can-i-be-banned-from-google-if-i-overuse-nowcrawling)
+    * [When I run NowCrawling with the same arguments at two different times, results are different! Why is that?](#user-content-when-i-run-nowcrawling-with-the-same-arguments-at-two-different-times-results-are-different-why-is-that)
     * [I'm running Windows and NowCrawling told me "Windows can't display this message"](#im-running-windows-and-nowcrawling-told-me-windows-cant-display-this-message)
     * [Why does NowCrawling sometimes visit weird looking URLs and get an obvious 404?](#why-does-nowcrawling-sometimes-visit-weird-looking-urls-and-get-an-obvious-404)
-    * [Is it possible to provide a list of match regexes and use different output directories/files for each of them?](#is-it-possible-to-provide-a-list-of-match-regexes-anuse-different-output-directoriesfiles-for-each-of-them)
-    * [When I'm downloading a file, the whole crawling process stops. Could downloading be done in the background, or in parallel?](#when-im-downloading-a-file-the-wholcrawling-process-stops-could-downloading-be-done-in-the-background-or-in-parallel)
+    * [Is it possible to provide a list of match regexes and use different output directories/files for each of them?](#user-content-is-it-possible-to-provide-a-list-of-match-regexes-anuse-different-output-directoriesfiles-for-each-of-them)
+    * [When I'm downloading a file, the whole crawling process stops. Could downloading be done in the background, or in parallel?](#user-content-when-im-downloading-a-file-the-wholcrawling-process-stops-could-downloading-be-done-in-the-background-or-in-parallel)
+    * [Is there a full list of options?](#is-there-a-full-list-of-options)
 
 (TOC created with [gh-md-toc](https://github.com/ekalinin/github-markdown-toc))
 
@@ -385,3 +386,86 @@ Not at the moment. You probably ask this if you're familiar with [Pastebin Crawl
 This is not implemented, but we plan to do so. Note that parallel downloads won't really give you a big boost. The only real advantage is that if two different threads handle downloading and page parsing in parallel, you might get a boost, as more pages can be parses while the download is happening. For this reason, we'll probably initially just implement a download queue. This also raises problems with the standard output and verbosity (if two threads try to print at the same time, and, in particular, if one of them is a progress bar, what will happen?). Additionally, with higher recursion depth levels we already do something to try and minimize this issue: we don't download files until we've finished visiting the whole recursion branch (e.g. even if you do `-z 100`, and get 3 Google search results, there will only be three periods during which downloads will be allowed: after the first page (and its web tree) has been visited, after the second and after the third).
 
 Hang on and it might come in a future release :)
+
+### Is there a full list of options?
+
+There is. Run the application with `-h`. If you want to learn them all, follow [each of our examples](#example-usage). In its present state, this is the output of running `nowcrawling -h`:
+
+```
+Usage: nowcrawling [options]
+
+NowCrawling version 1.0.0 by João Ricardo Lourenço & João Soares.
+
+Options:
+  -h, --help            show this help message and exit
+  -f, --files           Crawl for files
+  -c, --content         Crawl for content (words, strings, pages, regexes)
+  -k KEYWORDS, --keywords=KEYWORDS
+                        (Required) A quoted list of words separated by spaces
+                        which will be the search terms of the crawler
+  -i TIMEOUT, --ignore-after=TIMEOUT
+                        Time (in seconds) for an URL to be considered down
+                        (Default: 7)
+  -z RECURSION_DEPTH, --recursion-depth=RECURSION_DEPTH
+                        Recursion depth (starts at 1, which means no
+                        recursion). Default: 1
+  -v, --verbose         Display all error/warning/info messages
+  -b BLACKLIST_FILE, --blacklist=BLACKLIST_FILE
+                        Provide a BLACKLIST file for DOMAINS. One regex per
+                        line (use '#' for comments). e.g., to match all .com
+                        domains: '.*\.com'.
+  -w WHITELIST_FILE, --whitelist=WHITELIST_FILE
+                        Provide a WHITELIST file for DOMAINS. One regex per
+                        line (use '#' for comments). e.g., to match all .com
+                        domains: '.*\.com'.
+  -u URL_LIST, --url-list=URL_LIST
+                        Provide a list of URLs to use for crawling, instead of
+                        performing a google search. The list can be supplied
+                        in two ways: 1) a simple comma-separated list of URLs
+                        which begins with the keyword "list:" (e.g. -u
+                        "list:http://a.com,http://b.com") or 2) the path to a
+                        file which contains one URL per line, prefixed by the
+                        keyword "file:" (e.g. -u "file:a_file.txt"). In this
+                        file, use '#' for comments.
+
+  Files (-f) Crawler Arguments:
+    -a, --ask           Ask before downloading
+    -l LIMIT, --limit=LIMIT
+                        File size limit in bytes separated by a hyphen
+                        (example: 500-1200 for files between 500 and 1200
+                        bytes, -500 for files smaller than 500 bytes, 500- for
+                        files larger than 500 bytes. You can use human-
+                        readable suffixes such as MB, KB, GB, etc. E.g.: 50MB-
+                        means files larger than 50 MB) (Default: None)
+    -n MAXFILES, --number=MAXFILES
+                        Number of files to download until crawler stops
+                        (Default: Max)
+    -e EXTENSIONS, --extensions=EXTENSIONS
+                        A quoted list of file extensions separated by spaces.
+                        Default: all
+    -s, --smart         Smart file search, will highly reduce the crawling
+                        time but might not crawl all the results. Basically
+                        the same as appending 'intitle:index of' to your
+                        keywords.
+    -d DIRECTORY, --directory=DIRECTORY
+                        Directory to download files to. Will be created if it
+                        does not exist. Default is current directory
+
+  File Names Options:
+    You can only pick one. If none are picked, EVERY file matching the
+    specified extension will be downloaded
+
+    -t TAGS, --tags=TAGS
+                        A quoted list of words separated by spaces that must
+                        be present in the file name that you're crawling for
+    -r REGEX, --regex=REGEX
+                        Instead of tags you can just specify a regex for the
+                        file name you're looking for
+
+  Content (-c) Crawler Arguments:
+    -m REGEX, --match=REGEX
+                        (Required) A regex that will match the content you are
+                        crawling for
+    -o CONTENTFILE, --output-file=CONTENTFILE
+                        Output file to store content matches
+```
