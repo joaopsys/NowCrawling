@@ -28,7 +28,7 @@ __copyright__ = "Copyright 2015, João Ricardo Lourenço, João Soares"
 __credits__ = ["João Ricardo Lourenço", "João Soares"]
 __license__ = "GPLv2"
 __email__ = ["jorl17.8@gmail.com", "joaosoares11@hotmail.com"]
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 
 import contextlib
 import os
@@ -40,7 +40,14 @@ import urllib.parse
 from optparse import OptionParser, OptionGroup
 import re
 from timeit import default_timer as timer
-import chardet
+
+# Try to import chardet. If it fails, bookkeep so we deal with it later
+try:
+    import chardet
+    has_chardet = True
+except ImportError as e:
+    has_chardet = False
+
 
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
@@ -253,6 +260,32 @@ def doVerbose(f, verbose=False):
     if verbose:
         f()
 
+#------------------------------------------------------------------------------
+# A function to detect the most likely encoding used in a website. Ideally,
+# we use the chardet package if it is found. If it's note, we default to a
+# reasonably bad method (try utf-8, utf-16 and default to ascii) and print a
+# message (if verbosity is on), but only once. Note that since we may still
+# fail, callees should deal with the fact that the detected encoding might
+# just be plain wrong and might throw exceptions later on.
+#------------------------------------------------------------------------------
+@static_vars(no_chardet_message_shown=False)
+def get_most_likely_encoding(data, verbose):
+    if has_chardet:
+        return chardet.detect(data)['encoding']
+
+    if not get_most_likely_encoding.no_chardet_message_shown:
+        get_most_likely_encoding.no_chardet_message_shown = True
+        doVerbose(lambda: Logger().log('You do not have the chardet package installed. NowCrawling will try to workaround this issue but you should really install it. Probably something along the lines of pip install chardet (or pip3, pip_pypy3, etc.)',False, 'YELLOW'), verbose)
+        encodings_to_try = ['utf-8', 'utf-16']
+
+        for encoding in encodings_to_try:
+            try:
+                data.decode(encoding)
+                return encoding
+            except:
+                continue
+
+        return 'ascii'
 
 #------------------------------------------------------------------------------
 # Modified urllib.request.urlretrieve which supports sending custom headers.
@@ -368,7 +401,7 @@ def read_data_from_url(url, timeout, headers, verbose, indentation_level=0, max_
             r = response.read()
 
             try:
-                r = r.decode(chardet.detect(r)['encoding'])
+                r = r.decode(get_most_likely_encoding(r, verbose))
             except Exception as e:
                 doVerbose(lambda: Logger().log('URL {:s} has a weird encoding ({:s}). Using old method.'.format(url, str(e)), False, 'YELLOW',indentation_level=indentation_level), verbose)
                 r = str(r) #will have b''
