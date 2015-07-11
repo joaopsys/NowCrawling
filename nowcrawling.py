@@ -262,7 +262,7 @@ def doVerbose(f, verbose=False):
 
 #------------------------------------------------------------------------------
 # A function to detect the most likely encoding used in a website. Ideally,
-# we use the chardet package if it is found. If it's note, we default to a
+# we use the chardet package if it is found. If it's not, we default to a
 # reasonably bad method (try utf-8, utf-16 and default to ascii) and print a
 # message (if verbosity is on), but only once. Note that since we may still
 # fail, callees should deal with the fact that the detected encoding might
