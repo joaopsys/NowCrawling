@@ -40,6 +40,7 @@ import urllib.parse
 from optparse import OptionParser, OptionGroup
 import re
 from timeit import default_timer as timer
+import chardet
 
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
@@ -364,7 +365,15 @@ def read_data_from_url(url, timeout, headers, verbose, indentation_level=0, max_
         request = urllib.request.Request(url, None, headers)
         response = urllib.request.urlopen(request,timeout=timeout)
         if isValid(response.info()):
-            return str(response.read())
+            r = response.read()
+
+            try:
+                r = r.decode(chardet.detect(r)['encoding'])
+            except Exception as e:
+                doVerbose(lambda: Logger().log('URL {:s} has a weird encoding ({:s}). Using old method.'.format(url, str(e)), False, 'YELLOW',indentation_level=indentation_level), verbose)
+                r = str(r) #will have b''
+            return r
+
         else:
             doVerbose(lambda: Logger().log('URL {:s} does not look like a web page'.format(url), True, 'RED', indentation_level=indentation_level),verbose)
     except KeyboardInterrupt:
