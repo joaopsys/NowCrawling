@@ -475,17 +475,8 @@ def crawlGoogle(numres, start, query, doSmartSearch):
     return list(set(x.replace('a href=', '').replace('a HREF=', '').replace('"', '').replace('A HREF=', '') for x in p.findall(data)))
 
 #------------------------------------------------------------------------------
-# Regex parsing and building
+# Regex parsing, building and matching
 #------------------------------------------------------------------------------
-
-def getTagsRe(tags, flag):
-    tagslist = tags.split()
-    if flag == 1:
-        tagsre = "[^<>]*".join(tagslist)
-    else:
-        tagsre = "[^<>\n\t ]*".join(tagslist)
-    ##print(tagsre)
-    return tagsre
 
 def getTypesRe(types):
     return types.replace(' ', '|')
@@ -496,11 +487,24 @@ def build_regex(getfiles, tags, userRegex, types):
         if not tags and not userRegex:
             regex_str = FILE_REGEX.replace('tagholder', '').replace('typeholder', getTypesRe(types)).replace('holdertag','')
         elif tags:
-            regex_str = FILE_REGEX.replace('tagholder', getTagsRe(tags, 1)).replace('typeholder', getTypesRe(types)).replace('holdertag',getTagsRe(tags, 2))
+            first_tag = tags.split()[0]
+            regex_str = FILE_REGEX.replace('tagholder', first_tag).replace('typeholder', getTypesRe(types)).replace('holdertag',first_tag)
         else:
             regex_str = FILE_REGEX.replace('tagholder', userRegex).replace('typeholder', getTypesRe(types)).replace('holdertag', userRegex)
 
     return re.compile(regex_str,re.IGNORECASE),regex_str
+
+# Used to check if all tags in the tag string tags (e.g. "720p s05e10" are in the given string)
+# In case tags are empty or not used, just return True
+def matches_all_tags(s, tags):
+    if not tags:
+        return True
+    s = s.lower()
+
+    for tag in tags.lower().split():
+        if tag not in s:
+            return False
+    return True
 
 #------------------------------------------------------------------------------
 # Webpage crawling
@@ -512,7 +516,7 @@ def findRecursableURLS(text,crawlurl):
     prettyurls = [urllib.parse.urljoin(crawlurl,url) for url in prettyurls]
     return prettyurls
 
-def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, blacklist, whitelist, currentDepth=0, maxDepth=2, visitedUrls=[], prepend=''):
+def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, tags, verbose, timeout, blacklist, whitelist, currentDepth=0, maxDepth=2, visitedUrls=[], prepend=''):
     # Stop if we have exceeded maxDepth
     if currentDepth > maxDepth:
         return []
@@ -535,7 +539,7 @@ def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, tim
         if maxDepth != 0:
             doVerbose(lambda: Logger().log('{:s}Max depth reached, not listing URLs and not recursing.'.format(prepend), indentation_level=currentDepth), verbose)
 
-    matches = crawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, blacklist, whitelist, currentDepth+1, data)
+    matches = crawlURLForMatches(crawlurl, getfiles, compiled_regex, tags, verbose, timeout, blacklist, whitelist, currentDepth+1, data)
 
     if currentDepth < maxDepth:
         if not urls:
@@ -545,11 +549,11 @@ def recursiveCrawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, tim
             doVerbose(lambda: Logger().log('{:s}Recursable non-visited URLs found in {:s}: '.format(prepend,crawlurl) + ', '.join(urls), indentation_level=currentDepth), verbose)
             for url_number,url in enumerate(urls):
                 recurse_prepend = prepend[:-2] + ', {:d}/{:d}] '.format(url_number+1, len(urls))
-                matches += recursiveCrawlURLForMatches(url, getfiles, compiled_regex, verbose, timeout, blacklist, whitelist, currentDepth+1, maxDepth, visitedUrls, recurse_prepend)
+                matches += recursiveCrawlURLForMatches(url, getfiles, compiled_regex, tags, verbose, timeout, blacklist, whitelist, currentDepth+1, maxDepth, visitedUrls, recurse_prepend)
     return matches
 
 # This is Jota's crazy magic trick
-def crawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, blacklist, whitelist, indentationLevel, data=None):
+def crawlURLForMatches(crawlurl, getfiles, compiled_regex, tags, verbose, timeout, blacklist, whitelist, indentationLevel, data=None):
     doVerbose(lambda: Logger().log('Looking for matches in {:s} ...'.format(crawlurl), indentation_level=indentationLevel), verbose)
     if not data:
         data = read_data_from_url(crawlurl, timeout, GLOBAL_HEADERS, verbose, indentationLevel, blacklist=blacklist, whitelist=whitelist)
@@ -583,7 +587,9 @@ def crawlURLForMatches(crawlurl, getfiles, compiled_regex, verbose, timeout, bla
             prettyurls = list(x for x in tuples)
 
     matches = list(set(prettyurls))
-    doVerbose(lambda: Logger().log('Done looking for matches in {:s}...Found {:d} matches.'.format(crawlurl, len(matches)), indentation_level=indentationLevel), verbose)
+    matches = [match for match in matches if matches_all_tags(match, tags)]
+    doVerbose(lambda: Logger().log('Done looking for matches in {:s}...Found {} matches.'.format(crawlurl, len(matches) if matches else 'no'), indentation_level=indentationLevel), verbose)
+
     return [[i,crawlurl] for i in matches]
 
 #------------------------------------------------------------------------------
@@ -771,7 +777,7 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
 
             # Find matches in results. if getfiles, then these are urls
             for url_number,searchurl in enumerate(url_list):
-                matches = recursiveCrawlURLForMatches(searchurl, getfiles, compiled_regex, verbose, timeout, blacklist, whitelist, maxDepth=recursion_depth ,visitedUrls=ALL_VISITED_URLS, prepend='[{:d}/{:d}] '.format(url_number+1, len(url_list)))
+                matches = recursiveCrawlURLForMatches(searchurl, getfiles, compiled_regex, tags, verbose, timeout, blacklist, whitelist, maxDepth=recursion_depth ,visitedUrls=ALL_VISITED_URLS, prepend='[{:d}/{:d}] '.format(url_number+1, len(url_list)))
                 urllib.request.urlcleanup()
                 if not matches:
                     doVerbose(lambda: Logger().log('No results in '+searchurl), verbose)
