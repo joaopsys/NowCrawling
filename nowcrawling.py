@@ -387,21 +387,23 @@ def read_data_from_url(url, timeout, headers, verbose, indentation_level=0, max_
         return None
 
     def isValid(responseInfo):
-        if 'text' in str(responseInfo.get_all("Content-Type")[0]):
+        content_type = str(responseInfo.get_all("Content-Type")[0])
+        if 'text' in content_type:
             try:
                 datasize = int(responseInfo.get_all("Content-Length")[0])
-                return datasize <= max_data_size
+                return datasize <= max_data_size, '{} exceeds {} page size limit.'.format(max_data_size, datasize)
             except TypeError:
-                return True
+                return True,''
         else:
-            return False
+            return False,'{} is not an acceptable content-type'.format(content_type)
 
     try:
         request = urllib.request.Request(url, None, headers)
         request.add_header('Accept-encoding', 'gzip') # Don't want to miss out on all those gzipp-ed pages!
         response = urllib.request.urlopen(request,timeout=timeout)
-        if isValid(response.info()):
-            r = response.read()
+        valid,error=isValid(response.info())
+        if valid:
+
             # If the content is gzipped, we must decompress it
             if response.info().get('Content-Encoding') == 'gzip':
                 buf = BytesIO(response.read())
@@ -418,7 +420,7 @@ def read_data_from_url(url, timeout, headers, verbose, indentation_level=0, max_
             return r
 
         else:
-            doVerbose(lambda: Logger().log('URL {:s} does not look like a web page'.format(url), True, 'RED', indentation_level=indentation_level),verbose)
+            doVerbose(lambda: Logger().log('URL {:s} does not look like a web page ({:s})'.format(url, error), True, 'RED', indentation_level=indentation_level),verbose)
     except KeyboardInterrupt:
         Logger().fatal_error('Interrupted. Exiting...', indentation_level=indentation_level)
     except HTTPError as e:
