@@ -30,6 +30,8 @@ __license__ = "GPLv2"
 __email__ = ["jorl17.8@gmail.com", "joaosoares11@hotmail.com"]
 __version__ = "1.0.2"
 
+from io import BytesIO
+import gzip
 import contextlib
 import os
 import time
@@ -396,9 +398,17 @@ def read_data_from_url(url, timeout, headers, verbose, indentation_level=0, max_
 
     try:
         request = urllib.request.Request(url, None, headers)
+        request.add_header('Accept-encoding', 'gzip') # Don't want to miss out on all those gzipp-ed pages!
         response = urllib.request.urlopen(request,timeout=timeout)
         if isValid(response.info()):
             r = response.read()
+            # If the content is gzipped, we must decompress it
+            if response.info().get('Content-Encoding') == 'gzip':
+                buf = BytesIO(response.read())
+                f = gzip.GzipFile(fileobj=buf)
+                r = f.read()
+            else:
+                r = response.read()
 
             try:
                 r = r.decode(get_most_likely_encoding(r, verbose))
