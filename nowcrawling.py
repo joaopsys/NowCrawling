@@ -478,19 +478,19 @@ def crawlGoogle(numres, start, query, doSmartSearch):
 # Regex parsing, building and matching
 #------------------------------------------------------------------------------
 
-def getTypesRe(types):
+def get_types_regex_part(types):
     return types.replace(' ', '|')
 
 def build_regex(getfiles, tags, userRegex, types):
     regex_str = userRegex
     if getfiles:
         if not tags and not userRegex:
-            regex_str = FILE_REGEX.replace('tagholder', '').replace('typeholder', getTypesRe(types)).replace('holdertag','')
+            regex_str = FILE_REGEX.replace('tagholder', '').replace('typeholder', get_types_regex_part(types)).replace('holdertag','')
         elif tags:
             first_tag = tags.split()[0]
-            regex_str = FILE_REGEX.replace('tagholder', first_tag).replace('typeholder', getTypesRe(types)).replace('holdertag',first_tag)
+            regex_str = FILE_REGEX.replace('tagholder', first_tag).replace('typeholder', get_types_regex_part(types)).replace('holdertag',first_tag)
         else:
-            regex_str = FILE_REGEX.replace('tagholder', userRegex).replace('typeholder', getTypesRe(types)).replace('holdertag', userRegex)
+            regex_str = FILE_REGEX.replace('tagholder', userRegex).replace('typeholder', get_types_regex_part(types)).replace('holdertag', userRegex)
 
     return re.compile(regex_str,re.IGNORECASE),regex_str
 
