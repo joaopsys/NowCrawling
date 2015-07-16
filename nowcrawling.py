@@ -271,23 +271,28 @@ def doVerbose(f, verbose=False):
 # just be plain wrong and might throw exceptions later on.
 #------------------------------------------------------------------------------
 @static_vars(no_chardet_message_shown=False)
-def get_most_likely_encoding(data, verbose):
-    if has_chardet:
-        return chardet.detect(data)['encoding']
+def get_most_likely_encoding(data, hint, verbose):
+    encodings_to_try = ['utf-8', 'utf-16', 'iso-8859-1']
 
-    if not get_most_likely_encoding.no_chardet_message_shown:
+    if has_chardet:
+        # Add auto-detected encoding before the pre-defined suggestions.
+        encodings_to_try = [chardet.detect(data)['encoding']] + encodings_to_try
+    elif not get_most_likely_encoding.no_chardet_message_shown:
         get_most_likely_encoding.no_chardet_message_shown = True
         doVerbose(lambda: Logger().log('You do not have the chardet package installed. NowCrawling will try to workaround this issue but you should really install it. Probably something along the lines of pip install chardet (or pip3, pip_pypy3, etc.)',False, 'YELLOW'), verbose)
-        encodings_to_try = ['utf-8', 'utf-16']
 
-        for encoding in encodings_to_try:
-            try:
-                data.decode(encoding)
-                return encoding
-            except:
-                continue
+    # The hinted encoding (if there is one) should be added at the start
+    if hint:
+        encodings_to_try = [hint] + encodings_to_try
 
-        return 'ascii'
+    for encoding in encodings_to_try:
+        try:
+            data.decode(encoding)
+            return encoding
+        except:
+            continue
+
+    return 'ascii'
 
 #------------------------------------------------------------------------------
 # Modified urllib.request.urlretrieve which supports sending custom headers.
@@ -413,7 +418,17 @@ def read_data_from_url(url, timeout, headers, verbose, indentation_level=0, max_
                 r = response.read()
 
             try:
-                r = r.decode(get_most_likely_encoding(r, verbose))
+                # For different python versions and library versions, the way to find the charset is different, so we
+                # generalize.
+                # The goal here is to obtain the hint encoding (i.e. the encoding the website reports). It is used
+                # as the first encoding that get_most_likely_encoding uses
+                if hasattr(response.headers, "getparam"):
+                    hint_encoding = response.headers.getparam("charset")
+                else:
+                    hint_encoding = response.headers.get("charset")
+
+                # Effectively decode the data
+                r = r.decode(get_most_likely_encoding(r, hint_encoding, verbose))
             except Exception as e:
                 doVerbose(lambda: Logger().log('URL {:s} has a weird encoding ({:s}). Using old method.'.format(url, str(e)), False, 'YELLOW',indentation_level=indentation_level), verbose)
                 r = str(r) #will have b''
