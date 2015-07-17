@@ -757,7 +757,7 @@ def fetch_urls(url_list, keywords, start, smart, url_list_supplied, verbose):
 
     return url_list
 
-def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, directory, contentFile, verbose, timeout, recursion_depth, blacklist_file, whitelist_file, url_list):
+def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfiles, directory, contentFile, verbose, timeout, recursion_depth, blacklist_file, whitelist_file, url_list, permanent_search):
     downloaded = 0
     start = 0
     if limit:
@@ -794,11 +794,18 @@ def crawl(getfiles, keywords, extensions, smart, tags, regex, ask, limit, maxfil
             # Stop if:
             # a) We were given a URL list and so, we're done
             # b) We were searching Google, but they gave us less results than we asked for, thus we've reached the end
+            # Also restart if in permanent search mode
             if url_list_supplied or len(url_list) < GOOGLE_NUM_RESULTS:
-                Logger().log('No more results. Exiting.', True, 'GREEN')
-                break
+                if permanent_search:
+                    Logger().log('No more results. Restarting search (permanent search mode).', True, 'YELLOW')
+                    start = 0
+                else:
+                    Logger().log('No more results. Exiting.', True, 'GREEN')
+                    break
+            else:
+                start += len(url_list)
 
-            start+=len(url_list)
+
     except KeyboardInterrupt:
         Logger().fatal_error('Interrupted. Exiting...')
 
@@ -824,6 +831,7 @@ def parse_input():
     parser.add_option('-b', '--blacklist', help="Provide a BLACKLIST file for DOMAINS. One regex per line (use '#' for comments). e.g., to match all .com domains: '.*\.com'.", type="string", dest="blacklist_file",default=None)
     parser.add_option('-w', '--whitelist', help="Provide a WHITELIST file for DOMAINS. One regex per line (use '#' for comments). e.g., to match all .com domains: '.*\.com'.", type="string", dest="whitelist_file", default=None)
     parser.add_option('-u', '--url-list', help='Provide a list of URLs to use for crawling, instead of performing a google search. The list can be supplied in two ways: 1) a simple comma-separated list of URLs which begins with the keyword "list:" (e.g. -u "list:http://a.com,http://b.com") or 2) the path to a file which contains one URL per line, prefixed by the keyword "file:" (e.g. -u "file:a_file.txt"). In this file, use \'#\' for comments.',type="string", dest="url_list", default=None)
+    parser.add_option('-p', '--permanent-search', help='Enable the permanent search mode. If no more results are available, restart in a never-ending loop. Useful when used with -k. Note that if -n is supplied, it is still respected (Disabled by default)',action="store_true", dest="permanent_search", default=False)
 
     filesgroup = OptionGroup(parser, "Files (-f) Crawler Arguments")
     filesgroup.add_option('-a', '--ask', help='Ask before downloading', action="store_true", dest="ask", default=False)
@@ -834,7 +842,7 @@ def parse_input():
     filesgroup.add_option('-d', '--directory', help='Directory to download files to. Will be created if it does not exist. Default is current directory', type="string", dest="directory", default='.')
 
     filenamegroup = OptionGroup(parser, "File Names Options", "You can only pick one."" If none are picked, EVERY file matching the specified extension will be downloaded")
-    filenamegroup.add_option('-t', '--tags', help='A quoted list of words separated by spaces that must be present in the file name that you\'re crawling for', dest='tags', type='string')
+    filenamegroup.add_option('-t', '--tags', help='A quoted list of words separated by spaces that must be present in the file name that you\'re crawling for. Order is irrelevant.', dest='tags', type='string')
     filenamegroup.add_option('-r', '--regex', help='Instead of tags you can just specify a regex for the file name you\'re looking for', dest='regex', type='string')
 
     parser.add_option_group(filesgroup)
@@ -885,7 +893,7 @@ def parse_input():
     # Adjust the offset (we expect it to start at 0)
     options.recursion_depth -= 1
 
-    return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.directory, options.contentFile, options.verbose, options.timeout, options.recursion_depth, options.blacklist_file, options.whitelist_file, options.url_list
+    return options.getfiles, options.keywords, options.extensions, options.smart, options.tags, options.regex, options.ask, options.limit, options.maxfiles, options.directory, options.contentFile, options.verbose, options.timeout, options.recursion_depth, options.blacklist_file, options.whitelist_file, options.url_list, options.permanent_search
 
 #------------------------------------------------------------------------------
 #------------------------------------------------------------------------------

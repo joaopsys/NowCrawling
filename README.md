@@ -57,9 +57,10 @@ Table of Contents
     * [Why does NowCrawling sometimes visit weird looking URLs and get an obvious 404?](#why-does-nowcrawling-sometimes-visit-weird-looking-urls-and-get-an-obvious-404)
     * [Is it possible to provide a list of match regexes and use different output directories/files for each of them?](#user-content-is-it-possible-to-provide-a-list-of-match-regexes-anuse-different-output-directoriesfiles-for-each-of-them)
     * [When I'm downloading a file, the whole crawling process stops. Could downloading be done in the background, or in parallel?](#user-content-when-im-downloading-a-file-the-wholcrawling-process-stops-could-downloading-be-done-in-the-background-or-in-parallel)
+    *[Is there an option to keep NowCrawling searching in a never-ending loop? Restarting if there are no more results?](is-there-an-option-to-keep-nowcrawling-searching-in-a-never-ending-loop-restarting-if-there-are-no-more-results)
     * [Is there a full list of options?](#is-there-a-full-list-of-options)
 
-(TOC created with [gh-md-toc](https://github.com/ekalinin/github-markdown-toc))
+(TOC created with the help of [gh-md-toc](https://github.com/ekalinin/github-markdown-toc))
 
 ## Example Usage
 Here are some examples of how **NowCrawling** can be used. In most of them, you can add the `-v` flag to see what **NowCrawling** is doing in the background.
@@ -387,6 +388,10 @@ This is not implemented, but we plan to do so. Note that parallel downloads won'
 
 Hang on and it might come in a future release :)
 
+### Is there an option to keep NowCrawling searching in a never-ending loop? Restarting if there are no more results?
+
+Yes there is! It's `-p`,`--permanent-search`
+
 ### Is there a full list of options?
 
 There is. Run the application with `-h`. If you want to learn them all, follow [each of our examples](#example-usage). In its present state, this is the output of running `nowcrawling -h`:
@@ -427,6 +432,11 @@ Options:
                         file which contains one URL per line, prefixed by the
                         keyword "file:" (e.g. -u "file:a_file.txt"). In this
                         file, use '#' for comments.
+  -p, --permanent-search
+                        Enable the permanent search mode. If no more results
+                        are available, restart in a never-ending loop. Useful
+                        when used with -k. Note that if -n is supplied, it is
+                        still respected (Disabled by default)                        
 
   Files (-f) Crawler Arguments:
     -a, --ask           Ask before downloading
@@ -457,7 +467,8 @@ Options:
 
     -t TAGS, --tags=TAGS
                         A quoted list of words separated by spaces that must
-                        be present in the file name that you're crawling for
+                        be present in the file name that you're crawling for.
+                        Order is irrelevant.
     -r REGEX, --regex=REGEX
                         Instead of tags you can just specify a regex for the
                         file name you're looking for
