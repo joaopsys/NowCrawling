@@ -57,7 +57,7 @@ Table of Contents
     * [Why does NowCrawling sometimes visit weird looking URLs and get an obvious 404?](#why-does-nowcrawling-sometimes-visit-weird-looking-urls-and-get-an-obvious-404)
     * [Is it possible to provide a list of match regexes and use different output directories/files for each of them?](#user-content-is-it-possible-to-provide-a-list-of-match-regexes-anuse-different-output-directoriesfiles-for-each-of-them)
     * [When I'm downloading a file, the whole crawling process stops. Could downloading be done in the background, or in parallel?](#user-content-when-im-downloading-a-file-the-wholcrawling-process-stops-could-downloading-be-done-in-the-background-or-in-parallel)
-    * [Is there an option to keep NowCrawling searching in a never-ending loop? Restarting if there are no more results?](is-there-an-option-to-keep-nowcrawling-searching-in-a-never-ending-loop-restarting-if-there-are-no-more-results)
+    * [Is there an option to keep NowCrawling searching in a never-ending loop? Restarting if there are no more results?](#is-there-an-option-to-keep-nowcrawling-searching-in-a-never-ending-loop-restarting-if-there-are-no-more-results)
     * [Is there a full list of options?](#is-there-a-full-list-of-options)
 
 (TOC created with the help of [gh-md-toc](https://github.com/ekalinin/github-markdown-toc))
