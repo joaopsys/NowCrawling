@@ -57,7 +57,7 @@ Table of Contents
     * [Why does NowCrawling sometimes visit weird looking URLs and get an obvious 404?](#why-does-nowcrawling-sometimes-visit-weird-looking-urls-and-get-an-obvious-404)
     * [Is it possible to provide a list of match regexes and use different output directories/files for each of them?](#user-content-is-it-possible-to-provide-a-list-of-match-regexes-anuse-different-output-directoriesfiles-for-each-of-them)
     * [When I'm downloading a file, the whole crawling process stops. Could downloading be done in the background, or in parallel?](#user-content-when-im-downloading-a-file-the-wholcrawling-process-stops-could-downloading-be-done-in-the-background-or-in-parallel)
-    *[Is there an option to keep NowCrawling searching in a never-ending loop? Restarting if there are no more results?](is-there-an-option-to-keep-nowcrawling-searching-in-a-never-ending-loop-restarting-if-there-are-no-more-results)
+    * [Is there an option to keep NowCrawling searching in a never-ending loop? Restarting if there are no more results?](is-there-an-option-to-keep-nowcrawling-searching-in-a-never-ending-loop-restarting-if-there-are-no-more-results)
     * [Is there a full list of options?](#is-there-a-full-list-of-options)
 
 (TOC created with the help of [gh-md-toc](https://github.com/ekalinin/github-markdown-toc))
@@ -387,6 +387,7 @@ Not at the moment. You probably ask this if you're familiar with [Pastebin Crawl
 This is not implemented, but we plan to do so. Note that parallel downloads won't really give you a big boost. The only real advantage is that if two different threads handle downloading and page parsing in parallel, you might get a boost, as more pages can be parsed while the download is happening. For this reason, we'll probably initially just implement a download queue. This also raises problems with the standard output and verbosity (if two threads try to print at the same time, and, in particular, if one of them is a progress bar, what will happen?). Additionally, with higher recursion depth levels we already do something to try and minimize this issue: we don't download files until we've finished visiting the whole recursion branch (e.g. even if you do `-z 100`, and get 3 Google search results, there will only be three periods during which downloads will be allowed: after the first page (and its web tree) has been visited, after the second and after the third).
 
 Hang on and it might come in a future release :)
+
 
 ### Is there an option to keep NowCrawling searching in a never-ending loop? Restarting if there are no more results?
 
